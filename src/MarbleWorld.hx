@@ -2062,6 +2062,8 @@ class MarbleWorld extends Scheduler {
 	}
 
 	public function displayHelp(text:String) {
+		// Stick based prompts need the whole sentence reworded, not just the key name
+		text = ControlPrompts.rewrite(text);
 		var start = 0;
 		var pos = text.indexOf("<func:", start);
 		while (pos != -1) {
@@ -2074,30 +2076,36 @@ class MarbleWorld extends Scheduler {
 			var funcdata = func.split(' ').map(x -> x.toLowerCase());
 			var val = "";
 			if (funcdata[0] == "bind") {
-				if (funcdata[1] == "moveforward")
-					val = Util.getKeyForButton(Settings.controlsSettings.forward);
-				if (funcdata[1] == "movebackward")
-					val = Util.getKeyForButton(Settings.controlsSettings.backward);
-				if (funcdata[1] == "moveleft")
-					val = Util.getKeyForButton(Settings.controlsSettings.left);
-				if (funcdata[1] == "moveright")
-					val = Util.getKeyForButton(Settings.controlsSettings.right);
-				if (funcdata[1] == "panup")
-					val = Util.getKeyForButton(Settings.controlsSettings.camForward);
-				if (funcdata[1] == "pandown")
-					val = Util.getKeyForButton(Settings.controlsSettings.camBackward);
-				if (funcdata[1] == "turnleft")
-					val = Util.getKeyForButton(Settings.controlsSettings.camLeft);
-				if (funcdata[1] == "turnright")
-					val = Util.getKeyForButton(Settings.controlsSettings.camRight);
-				if (funcdata[1] == "jump")
-					val = Util.getKeyForButton(Settings.controlsSettings.jump);
-				if (funcdata[1] == "mousefire")
-					val = Util.getKeyForButton(Settings.controlsSettings.powerup);
-				if (funcdata[1] == "freelook")
-					val = Util.getKeyForButton(Settings.controlsSettings.freelook);
-				if (funcdata[1] == "useblast")
-					val = Util.getKeyForButton(Settings.controlsSettings.blast);
+				// A connected pad names its own controls, otherwise fall through to the keys
+				var padLabel = ControlPrompts.bindLabel(funcdata[1]);
+				if (padLabel != null) {
+					val = padLabel;
+				} else {
+					if (funcdata[1] == "moveforward")
+						val = Util.getKeyForButton(Settings.controlsSettings.forward);
+					if (funcdata[1] == "movebackward")
+						val = Util.getKeyForButton(Settings.controlsSettings.backward);
+					if (funcdata[1] == "moveleft")
+						val = Util.getKeyForButton(Settings.controlsSettings.left);
+					if (funcdata[1] == "moveright")
+						val = Util.getKeyForButton(Settings.controlsSettings.right);
+					if (funcdata[1] == "panup")
+						val = Util.getKeyForButton(Settings.controlsSettings.camForward);
+					if (funcdata[1] == "pandown")
+						val = Util.getKeyForButton(Settings.controlsSettings.camBackward);
+					if (funcdata[1] == "turnleft")
+						val = Util.getKeyForButton(Settings.controlsSettings.camLeft);
+					if (funcdata[1] == "turnright")
+						val = Util.getKeyForButton(Settings.controlsSettings.camRight);
+					if (funcdata[1] == "jump")
+						val = Util.getKeyForButton(Settings.controlsSettings.jump);
+					if (funcdata[1] == "mousefire")
+						val = Util.getKeyForButton(Settings.controlsSettings.powerup);
+					if (funcdata[1] == "freelook")
+						val = Util.getKeyForButton(Settings.controlsSettings.freelook);
+					if (funcdata[1] == "useblast")
+						val = Util.getKeyForButton(Settings.controlsSettings.blast);
+				}
 			}
 			start = val.length + pos;
 			text = pre + val + post;
@@ -2187,9 +2195,10 @@ class MarbleWorld extends Scheduler {
 			}
 			var endGameCode = () -> {
 				this.dispose();
+				// The statics already point at the level that was just played, set when it
+				// started, so the level select opens showing it
 				var pmg = new PlayMissionGui();
-				PlayMissionGui.currentSelectionStatic = mission.index + 1;
-				MarbleGame.canvas.setContent(pmg);
+				MarbleGame.canvas.setContent(pmg, () -> new PlayMissionGui());
 				#if js
 				pointercontainer.hidden = false;
 				#end
@@ -2226,7 +2235,30 @@ class MarbleWorld extends Scheduler {
 				}
 			}
 			restartGameCode();
-		}, mission, finishTime);
+		}, mission, finishTime, (sender) -> {
+			// Straight into the following level, skipping the level select entirely
+			var upcoming = MissionList.getNextMission(mission);
+			if (upcoming == null)
+				return;
+			if (MarbleGame.instance.toRecord) {
+				if (this.isRecording) {
+					this.isRecording = false;
+					this.clearScheduleId("stopRecordingTimeout");
+				}
+				if (wasRecording) {
+					this.saveReplay();
+				}
+			}
+			if (Util.isTouchDevice()) {
+				MarbleGame.instance.touchInput.hideControls(@:privateAccess this.playGui.playGuiCtrl);
+			}
+			// playMission tears the old world down itself. Disposing here as well ran
+			// MarbleWorld.dispose twice, which killed the load before the level was built.
+			MarbleGame.instance.playMission(upcoming);
+			#if js
+			pointercontainer.hidden = true;
+			#end
+		});
 		MarbleGame.canvas.pushDialog(egg);
 		this.setCursorLock(false);
 		return 0;
@@ -2439,7 +2471,11 @@ class MarbleWorld extends Scheduler {
 		#end
 	}
 
-	public function dispose() {
+	/**
+		`silent` leaves the audio stopped instead of starting the menu track, for when
+		another level is loading straight after this one.
+	**/
+	public function dispose(silent:Bool = false) {
 		// Gotta add the timesinceload to our stats
 		if (!this.isWatching) {
 			Settings.playStatistics.totalTime += this.timeState.timeSinceLoad;
@@ -2510,7 +2546,8 @@ class MarbleWorld extends Scheduler {
 
 		this._disposed = true;
 		AudioManager.stopAllSounds();
-		AudioManager.playShell();
+		if (!silent)
+			AudioManager.playShell();
 	}
 }
 

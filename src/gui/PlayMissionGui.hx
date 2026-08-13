@@ -117,7 +117,8 @@ class PlayMissionGui extends GuiImage {
 		var tmpprevtile = Tile.fromBitmap(temprev);
 
 		var pmPreview = new GuiImage(tmpprevtile);
-		pmPreview.position = new Vector(312, 42);
+		// Lifted to make room for the level name underneath it
+		pmPreview.position = new Vector(312, 30);
 		pmPreview.extent = new Vector(258, 193);
 		pmBox.addChild(pmPreview);
 		var filt = new ColorMatrix(Matrix.I());
@@ -147,20 +148,20 @@ class PlayMissionGui extends GuiImage {
 		var arialBold14 = arialb14b.toSdfFont(cast 12 * Settings.uiScale, MultiChannel);
 
 		var levelBkgnd = new GuiText(domcasual24);
-		levelBkgnd.position = new Vector(5, 156);
-		levelBkgnd.extent = new Vector(254, 24);
+		levelBkgnd.position = new Vector(313, 228);
+		levelBkgnd.extent = new Vector(258, 24);
 		levelBkgnd.text.textColor = 0x000000;
 		levelBkgnd.justify = Center;
 		levelBkgnd.text.text = "Beginner Level 3";
-		levelWnd.addChild(levelBkgnd);
+		pmBox.addChild(levelBkgnd);
 
 		var levelFgnd = new GuiText(domcasual24);
-		levelFgnd.position = new Vector(4, 155);
-		levelFgnd.extent = new Vector(254, 24);
+		levelFgnd.position = new Vector(312, 227);
+		levelFgnd.extent = new Vector(258, 24);
 		levelFgnd.text.textColor = 0xFFFFFF;
 		levelFgnd.justify = Center;
 		levelFgnd.text.text = "Beginner Level 3";
-		levelWnd.addChild(levelFgnd);
+		pmBox.addChild(levelFgnd);
 
 		var noQualText = new GuiText(domcasual32);
 		noQualText.position = new Vector(0, 84);
@@ -370,8 +371,12 @@ class PlayMissionGui extends GuiImage {
 				currentList = MissionList.advancedMissions;
 			}
 			currentCategoryStatic = currentCategory;
-			// Entering a category always lands on its first level
-			setSelectedFunc(0);
+			// Deliberately switching category lands on its first level, but the initial
+			// build keeps whichever level is remembered, so leaving a level returns to it
+			if (doRender)
+				setSelectedFunc(0);
+			else
+				setSelectedFunc(currentSelectionStatic);
 			if (doRender)
 				this.render(cast(this.parent, Canvas).scene2d);
 		}
@@ -535,9 +540,23 @@ class PlayMissionGui extends GuiImage {
 
 		// The tab row sits above the button row, so the plain spatial search lands on the
 		// wrong control. Wire the vertical moves between the two rows explicitly.
+		// LB/RB cycle the difficulty tabs
+		this.controllerShoulderAction = (dir:Int) -> {
+			var order = ["beginner", "intermediate", "advanced"];
+			var i = order.indexOf(currentCategory) + dir;
+			if (i < 0)
+				i = order.length - 1;
+			if (i >= order.length)
+				i = 0;
+			currentCategory = order[i];
+			setCategoryFunc(currentCategory);
+		};
+
+		// Returning from a level should land on play, not on whichever tab comes first
+		this.controllerDefaultFocus = pmPlay;
 		pmNext.controllerNavUp = tabAdvanced;
 		pmPrev.controllerNavUp = tabIntermediate;
-		tabIntermediate.controllerNavDown = pmPlay;
+		tabIntermediate.controllerNavDown = pmPrev;
 
 		setCategoryFunc(currentCategoryStatic, false);
 

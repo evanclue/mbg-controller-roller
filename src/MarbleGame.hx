@@ -355,9 +355,17 @@ class MarbleGame {
 	}
 
 	public function playMission(mission:Mission, multiplayer:Bool = false) {
+		// Remember whatever is actually being played, so leaving by any route - the pause
+		// menu, or the end game screen - returns to the level select showing this level
+		if (!mission.isClaMission && !mission.isCustom) {
+			PlayMissionGui.currentCategoryStatic = mission.type;
+			PlayMissionGui.currentSelectionStatic = mission.index;
+		}
 		canvas.clearContent();
 		if (world != null) {
-			world.dispose();
+			// Straight into another level, so stay silent through the load rather than
+			// starting the menu track for the moment the loading screen is up
+			world.dispose(true);
 		}
 		Analytics.trackLevelPlay(mission.title, mission.path);
 		world = new MarbleWorld(scene, scene2d, mission, true, multiplayer);

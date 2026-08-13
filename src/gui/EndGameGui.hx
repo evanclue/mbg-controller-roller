@@ -4,6 +4,7 @@ import src.MarbleGame;
 import src.Settings.Score;
 import src.Settings.Settings;
 import src.Mission;
+import src.MissionList;
 import h2d.filter.DropShadow;
 import hxd.res.BitmapFont;
 import h3d.Vector;
@@ -16,7 +17,8 @@ class EndGameGui extends GuiControl {
 
 	var scoreSubmitted:Bool = false;
 
-	public function new(continueFunc:GuiControl->Void, restartFunc:GuiControl->Void, mission:Mission, timeState:TimeState) {
+	public function new(continueFunc:GuiControl->Void, restartFunc:GuiControl->Void, mission:Mission, timeState:TimeState,
+			?nextFunc:GuiControl->Void) {
 		super();
 		this.horizSizing = Width;
 		this.vertSizing = Height;
@@ -37,25 +39,52 @@ class EndGameGui extends GuiControl {
 		pg.position = new Vector(77, 9);
 		pg.extent = new Vector(485, 461);
 
+		function loadButtonImagesDisabled(path:String) {
+			var tiles = loadButtonImages(path);
+			tiles.push(ResourceLoader.getResource('${path}_i.png', ResourceLoader.getImage, this.imageResources).toTile());
+			return tiles;
+		}
+
+		// Returns to the level select. Centred in the panel, with next to its right.
 		var continueButton = new GuiButton(loadButtonImages("data/ui/endgame/continue"));
 		continueButton.horizSizing = Right;
 		continueButton.vertSizing = Bottom;
-		continueButton.position = new Vector(333, 386);
+		continueButton.position = new Vector(186, 386);
 		continueButton.extent = new Vector(113, 47);
+		continueButton.controllerTipOffset = new Vector(103, 35);
 		continueButton.accelerator = hxd.Key.ENTER;
 		continueButton.pressedAction = (e) -> continueFunc(this);
+
+		// Straight into the following level, so a run can be played back to back
+		var nextMission = MissionList.getNextMission(mission);
+		var nextButton = new GuiButton(loadButtonImagesDisabled("data/ui/endgame/next"));
+		nextButton.horizSizing = Right;
+		nextButton.vertSizing = Bottom;
+		nextButton.position = new Vector(350, 380);
+		nextButton.extent = new Vector(75, 60);
+		nextButton.controllerTipOffset = new Vector(56, 41);
+		nextButton.disabled = nextMission == null || nextFunc == null;
+		nextButton.pressedAction = (e) -> {
+			if (nextFunc != null)
+				nextFunc(this);
+		};
 
 		var restartButton = new GuiButton(loadButtonImages("data/ui/endgame/replay"));
 		restartButton.horizSizing = Right;
 		restartButton.vertSizing = Bottom;
 		restartButton.position = new Vector(51, 388);
 		restartButton.extent = new Vector(104, 48);
+		restartButton.controllerTipOffset = new Vector(89, 33);
 		restartButton.gamepadAccelerator = ["B"];
 		restartButton.pressedAction = (e) -> restartFunc(this);
+
+		// Carrying on to the next level is the common case after finishing one
+		this.controllerDefaultFocus = nextButton;
 
 		function setButtonStates(enabled:Bool) {
 			continueButton.disabled = !enabled;
 			restartButton.disabled = !enabled;
+			nextButton.disabled = !enabled || nextMission == null || nextFunc == null;
 		}
 
 		var arial14fontdata = ResourceLoader.getFileEntry("data/font/arial.fnt");
@@ -164,6 +193,7 @@ class EndGameGui extends GuiControl {
 		pg.addChild(rightColumnGold);
 
 		pg.addChild(continueButton);
+		pg.addChild(nextButton);
 		pg.addChild(restartButton);
 
 		this.addChild(pg);

@@ -19,6 +19,34 @@ class MissionList {
 
 	public function new() {}
 
+	/**
+		The level that follows this one, rolling on into the next difficulty when a category
+		runs out. Null once there is nothing after it. The returned mission carries its own
+		index and difficulty so the chain keeps working level after level.
+	**/
+	public static function getNextMission(mission:Mission):Mission {
+		if (mission == null)
+			return null;
+		buildMissionList();
+		var lists = [beginnerMissions, intermediateMissions, advancedMissions];
+		var difficulty = mission.difficultyIndex;
+		if (difficulty < 0 || difficulty >= lists.length)
+			return null;
+		var index = mission.index + 1;
+		while (difficulty < lists.length) {
+			var list = lists[difficulty];
+			if (list != null && index < list.length) {
+				var next = list[index];
+				next.index = index;
+				next.difficultyIndex = difficulty;
+				return next;
+			}
+			difficulty++;
+			index = 0;
+		}
+		return null;
+	}
+
 	public static function buildMissionList() {
 		if (_build)
 			return;
