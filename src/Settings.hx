@@ -196,7 +196,7 @@ class Settings {
 		cameraYAxis: "ranalogY",
 		jump: ["A", "LT"],
 		powerup: ["B", "RT"],
-		cameraSensitivity: 1.0,
+		cameraSensitivity: 0.6,
 		invertXAxis: false,
 		invertYAxis: false,
 		axisDeadzone: 0.15,

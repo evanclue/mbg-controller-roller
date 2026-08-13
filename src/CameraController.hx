@@ -275,28 +275,23 @@ class CameraController extends Object {
 		var gamepadX = applyNonlinearScale(rescaleDeadZone(Gamepad.getAxis(Settings.gamepadSettings.cameraXAxis), Settings.gamepadSettings.axisDeadzone));
 		var gamepadY = rescaleDeadZone(Gamepad.getAxis(Settings.gamepadSettings.cameraYAxis), Settings.gamepadSettings.axisDeadzone);
 
-		var cameraPitchDelta = (Key.isDown(Settings.controlsSettings.camBackward) ? 1 : 0)
-			- (Key.isDown(Settings.controlsSettings.camForward) ? 1 : 0)
-			+ gamepadY;
+		var cameraPitchDelta:Float = (Key.isDown(Settings.controlsSettings.camBackward) ? 1 : 0)
+			- (Key.isDown(Settings.controlsSettings.camForward) ? 1 : 0);
 		if (Settings.gamepadSettings.invertYAxis)
-			cameraPitchDelta = -cameraPitchDelta;
-		nextCameraPitch += 0.75 * 5 * cameraPitchDelta * dt * Settings.gamepadSettings.cameraSensitivity;
-		var cameraYawDelta = (Key.isDown(Settings.controlsSettings.camRight) ? 1 : 0) - (Key.isDown(Settings.controlsSettings.camLeft) ? 1 : 0) + gamepadX;
+			gamepadY = -gamepadY;
+		cameraPitchDelta += gamepadY * Settings.gamepadSettings.cameraSensitivity;
+		var cameraYawDelta:Float = (Key.isDown(Settings.controlsSettings.camRight) ? 1 : 0) - (Key.isDown(Settings.controlsSettings.camLeft) ? 1 : 0);
 		if (Settings.gamepadSettings.invertXAxis)
-			cameraYawDelta = -cameraYawDelta;
+			gamepadX = -gamepadX;
+		cameraYawDelta += gamepadX * Settings.gamepadSettings.cameraSensitivity;
 
 		if (MarbleGame.instance.paused) {
 			cameraYawDelta = 0;
 			cameraPitchDelta = 0;
 		}
 
-		var gamePadSensitivity = 1.0;
-		if (wasLastGamepadInput) {
-			gamePadSensitivity = (1.6 - Settings.controlsSettings.cameraSensitivity); // It defaults to 0.6
-		}
-
-		var deltaX = 0.75 * 5 * cameraYawDelta * dt * gamePadSensitivity;
-		var deltaY = 0.75 * 5 * cameraPitchDelta * dt * gamePadSensitivity;
+		var deltaX = 0.75 * 5 * cameraYawDelta * dt;
+		var deltaY = 0.75 * 5 * cameraPitchDelta * dt;
 
 		// Center the pitch
 		if (Util.isTouchDevice()) { // Do this only on touch devices
