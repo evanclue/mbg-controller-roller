@@ -38,15 +38,17 @@ class GuiButton extends GuiAnim {
 		since a fully transparent button still reports itself as visible.
 	**/
 	override function isControllerTarget():Bool {
-		return controllerFocusable && !disabled && this.anim != null && this.anim.visible;
+		// Greyed out buttons stay selectable so the highlight does not jump away underneath
+		// the player. controllerActivate is what refuses to fire.
+		return controllerFocusable && this.anim != null && this.anim.visible;
 	}
 
 	override function controllerActivate():Void {
-		if (disabled || pressedAction == null)
+		if (disabled)
 			return;
 		if (buttonSounds)
 			AudioManager.playSound(ResourceLoader.getResource("data/sound/buttonpress.wav", ResourceLoader.getAudio, this.soundResources));
-		pressedAction(new GuiEvent(this));
+		activate();
 	}
 
 	public function new(anim:Array<Tile>) {
@@ -110,8 +112,11 @@ class GuiButton extends GuiAnim {
 		super.update(dt, mouseState);
 	}
 
-	public override function onMouseRelease(mouseState:MouseState) {
-		super.onMouseRelease(mouseState);
+	/**
+		What a completed click does. Shared with the gamepad path so a toggle or radio
+		actually changes state there too, rather than only showing the held down frame.
+	**/
+	function activate() {
 		if (this.pressedAction != null && !disabled) {
 			this.pressedAction(new GuiEvent(this));
 		}
@@ -130,6 +135,11 @@ class GuiButton extends GuiAnim {
 				}
 			}
 		}
+	}
+
+	public override function onMouseRelease(mouseState:MouseState) {
+		super.onMouseRelease(mouseState);
+		activate();
 	}
 
 	public override function onMouseEnter(mouseState:MouseState) {

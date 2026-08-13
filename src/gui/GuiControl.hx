@@ -97,6 +97,12 @@ class GuiControl {
 
 	var controllerNavRight:GuiControl = null;
 
+	/**
+		Set on a screen to say where the highlight should start, instead of falling back to
+		whichever selectable control happens to come first in tree order.
+	**/
+	var controllerDefaultFocus:GuiControl = null;
+
 	/** Directions match `ControllerCursor`: 0 up, 1 down, 2 left, 3 right. **/
 	function controllerNavOverride(dir:Int):GuiControl {
 		return switch (dir) {
@@ -114,6 +120,23 @@ class GuiControl {
 
 	/** Do whatever a click on this control would do. **/
 	function controllerActivate():Void {}
+
+	/**
+		Controls like sliders use left and right themselves, so while focused those
+		directions adjust the value instead of moving the highlight.
+	**/
+	function controllerConsumesHorizontal():Bool {
+		return false;
+	}
+
+	/** Direction is 2 for left, 3 for right. **/
+	function controllerAdjust(dir:Int):Void {}
+
+	/**
+		Set on a screen with a row of tabs to cycle them with the shoulder buttons. The
+		argument is -1 for LB and 1 for RB.
+	**/
+	var controllerShoulderAction:Int->Void = null;
 
 	// var _border:h2d.Graphics = null;
 

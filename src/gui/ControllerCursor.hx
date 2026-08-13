@@ -51,6 +51,18 @@ class ControllerCursor {
 
 	static inline var REPEAT_INTERVAL = 0.14;
 
+	/**
+		Adjusting a slider starts one notch at a time and speeds up the longer a direction is
+		held, so a small correction is easy but crossing the whole range is quick.
+	**/
+	static inline var ADJUST_DELAY = 0.35;
+
+	static inline var ADJUST_INTERVAL_START = 0.18;
+
+	static inline var ADJUST_INTERVAL_MIN = 0.03;
+
+	static inline var ADJUST_ACCEL = 0.82;
+
 	var bmp:Bitmap;
 	var scene2d:Scene;
 
@@ -64,6 +76,7 @@ class ControllerCursor {
 	var heldDir:Int = 0;
 	var heldTime:Float = 0;
 	var repeatTime:Float = 0;
+	var repeats:Int = 0;
 
 	var confirmHeld:Bool = false;
 
@@ -206,8 +219,18 @@ class ControllerCursor {
 			bmp.visible = false;
 			return;
 		}
-		if (focused == null || buttons.indexOf(focused) == -1)
-			setFocus(buttons[0], false);
+		if (focused == null || buttons.indexOf(focused) == -1) {
+			var preferred = screen.controllerDefaultFocus;
+			setFocus(preferred != null && buttons.indexOf(preferred) != -1 ? preferred : buttons[0], false);
+		}
+
+		// Shoulder buttons cycle a screen's tab row, if it has one
+		if (screen.controllerShoulderAction != null) {
+			if (Gamepad.isPressed(["LB"]))
+				screen.controllerShoulderAction(-1);
+			else if (Gamepad.isPressed(["RB"]))
+				screen.controllerShoulderAction(1);
+		}
 
 		// Directional movement, with a hold to repeat so a held stick walks the menu
 		var dir = readDirection();
@@ -219,23 +242,35 @@ class ControllerCursor {
 			heldTime = 0;
 			repeatTime = 0;
 		} else {
+			// A focused slider takes horizontal input for itself, and repeats on its own curve
+			var adjusting = (dir == 2 || dir == 3) && focused != null && focused.controllerConsumesHorizontal();
 			var moved = false;
 			if (dir != heldDir) {
 				heldDir = dir;
 				heldTime = 0;
-				repeatTime = REPEAT_DELAY;
+				repeats = 0;
+				repeatTime = adjusting ? ADJUST_DELAY : REPEAT_DELAY;
 				moved = true;
 			} else {
 				heldTime += dt;
 				if (heldTime >= repeatTime) {
-					repeatTime = heldTime + REPEAT_INTERVAL;
+					repeats++;
+					var interval = if (adjusting) {
+						var accelerated = ADJUST_INTERVAL_START * Math.pow(ADJUST_ACCEL, repeats);
+						accelerated < ADJUST_INTERVAL_MIN ? ADJUST_INTERVAL_MIN : accelerated;
+					} else REPEAT_INTERVAL;
+					repeatTime = heldTime + interval;
 					moved = true;
 				}
 			}
 			if (moved) {
-				var next = findAdjacent(buttons, dir);
-				if (next != null)
-					setFocus(next, true);
+				if (adjusting) {
+					focused.controllerAdjust(dir);
+				} else {
+					var next = findAdjacent(buttons, dir);
+					if (next != null)
+						setFocus(next, true);
+				}
 			}
 		}
 
