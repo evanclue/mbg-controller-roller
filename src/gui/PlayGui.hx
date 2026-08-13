@@ -123,6 +123,7 @@ class PlayGui {
 		rsgo.push(ResourceLoader.getResource("data/ui/game/set.png", ResourceLoader.getImage, this.imageResources).toTile());
 		rsgo.push(ResourceLoader.getResource("data/ui/game/go.png", ResourceLoader.getImage, this.imageResources).toTile());
 		rsgo.push(ResourceLoader.getResource("data/ui/game/outofbounds.png", ResourceLoader.getImage, this.imageResources).toTile());
+		GuiControl.useNearestFilterAll(rsgo);
 		RSGOCenterText = new Anim(rsgo, 0, scene2d);
 
 		powerupBox = new GuiImage(ResourceLoader.getResource('data/ui/game/powerup.png', ResourceLoader.getImage, this.imageResources).toTile());
@@ -139,9 +140,12 @@ class PlayGui {
 		playGuiCtrl.render(scene2d);
 
 		resizeEv = () -> {
-			var wnd = Window.getInstance();
+			// Settings recomputes uiScale on its own resize handler, registered first
+			rebuildTextFonts();
+			rebuildGemTarget();
+			rebuildPowerupTarget();
 			playGuiCtrl.render(MarbleGame.canvas.scene2d);
-			powerupImageSceneTargetBitmap.x = wnd.width - 88;
+			layoutOverlays();
 		};
 
 		Window.getInstance().addResizeEvent(resizeEv);
@@ -196,31 +200,36 @@ class PlayGui {
 	}
 
 	public function initCenterText() {
-		RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[0].width * Settings.uiScale / 2;
-		RSGOCenterText.y = scene2d.height * 0.3; // - RSGOCenterText.frames[0].height / 2;
+		layoutCenterText();
+	}
+
+	/**
+		Re-centre and re-scale the ready/set/go/out of bounds art against the current
+		`Settings.uiScale`, using whichever frame is showing.
+	**/
+	public function layoutCenterText() {
+		var frame = Std.int(RSGOCenterText.currentFrame);
+		if (frame < 0 || frame >= RSGOCenterText.frames.length)
+			frame = 0;
 		RSGOCenterText.setScale(Settings.uiScale);
+		RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[frame].width * Settings.uiScale / 2;
+		RSGOCenterText.y = scene2d.height * 0.3;
 	}
 
 	public function setCenterText(identifier:String) {
 		if (identifier == 'none') {
 			this.RSGOCenterText.visible = false;
-		} else if (identifier == 'ready') {
-			this.RSGOCenterText.visible = true;
-			this.RSGOCenterText.currentFrame = 0;
-			RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[0].width * Settings.uiScale / 2;
-		} else if (identifier == 'set') {
-			this.RSGOCenterText.visible = true;
-			this.RSGOCenterText.currentFrame = 1;
-			RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[1].width * Settings.uiScale / 2;
-		} else if (identifier == 'go') {
-			this.RSGOCenterText.visible = true;
-			this.RSGOCenterText.currentFrame = 2;
-			RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[2].width * Settings.uiScale / 2;
-		} else if (identifier == 'outofbounds') {
-			this.RSGOCenterText.visible = true;
-			this.RSGOCenterText.currentFrame = 3;
-			RSGOCenterText.x = scene2d.width / 2 - RSGOCenterText.frames[3].width * Settings.uiScale / 2;
+			return;
 		}
+		this.RSGOCenterText.visible = true;
+		this.RSGOCenterText.currentFrame = switch (identifier) {
+			case 'ready': 0;
+			case 'set': 1;
+			case 'go': 2;
+			case 'outofbounds': 3;
+			case _: this.RSGOCenterText.currentFrame;
+		};
+		layoutCenterText();
 	}
 
 	public function doStateChangeSound(state:String) {
@@ -267,10 +276,7 @@ class PlayGui {
 		// var gemImageRenderer = cast(this.gemImageScene.renderer, h3d.scene.Renderer);
 		// gemImageRenderer.skyMode = Hide;
 
-		gemImageSceneTarget = new Texture(60, 60, [Target]);
-		gemImageSceneTarget.depthBuffer = new DepthBuffer(60, 60);
-
-		gemImageSceneTargetBitmap = new Bitmap(Tile.fromTexture(gemImageSceneTarget), scene2d);
+		rebuildGemTarget();
 		gemImageSceneTargetBitmap.x = -8 * Settings.uiScale;
 		gemImageSceneTargetBitmap.y = -8 * Settings.uiScale;
 		gemImageSceneTargetBitmap.setScale(Settings.uiScale);
@@ -313,20 +319,102 @@ class PlayGui {
 		// var powerupImageRenderer = cast(this.powerupImageScene.renderer, h3d.scene.pbr.Renderer);
 		// powerupImageRenderer.skyMode = Hide;
 
-		powerupImageSceneTarget = new Texture(68, 67, [Target]);
-		powerupImageSceneTarget.depthBuffer = new DepthBuffer(68, 67);
-
-		powerupImageSceneTargetBitmap = new Bitmap(Tile.fromTexture(powerupImageSceneTarget), scene2d);
-		powerupImageSceneTargetBitmap.x = scene2d.width - 88 * Settings.uiScale;
-		powerupImageSceneTargetBitmap.y = 18 * Settings.uiScale;
-		powerupImageSceneTargetBitmap.setScale(Settings.uiScale);
+		rebuildPowerupTarget();
+		layoutOverlays();
 	}
 
-	function initTexts() {
+	// Shared with the end game score text, see GuiControl.TEXT_SHADOW_OFFSET
+	static inline var TEXT_SHADOW_OFFSET = GuiControl.TEXT_SHADOW_OFFSET;
+
+	// Size the gem and powerup icons are drawn at when uiScale is 1
+	static inline var GEM_TARGET_SIZE = 60;
+	static inline var POWERUP_TARGET_WIDTH = 68;
+	static inline var POWERUP_TARGET_HEIGHT = 67;
+
+	/**
+		The gem and powerup icons are small 3d scenes rendered to a texture. Size that
+		texture by `Settings.uiScale` so they are rendered at the resolution they are
+		actually shown at, instead of rendering at 1x and scaling the result up.
+	**/
+	function rebuildGemTarget() {
+		var size = Math.ceil(GEM_TARGET_SIZE * Settings.uiScale);
+		if (gemImageSceneTarget != null && gemImageSceneTarget.width == size)
+			return;
+		if (gemImageSceneTarget != null) {
+			if (gemImageSceneTarget.depthBuffer != null)
+				gemImageSceneTarget.depthBuffer.dispose();
+			gemImageSceneTarget.dispose();
+		}
+		gemImageSceneTarget = new Texture(size, size, [Target]);
+		gemImageSceneTarget.depthBuffer = new DepthBuffer(size, size);
+		if (gemImageSceneTargetBitmap == null)
+			gemImageSceneTargetBitmap = new Bitmap(Tile.fromTexture(gemImageSceneTarget), scene2d);
+		else
+			gemImageSceneTargetBitmap.tile = Tile.fromTexture(gemImageSceneTarget);
+	}
+
+	function rebuildPowerupTarget() {
+		var width = Math.ceil(POWERUP_TARGET_WIDTH * Settings.uiScale);
+		var height = Math.ceil(POWERUP_TARGET_HEIGHT * Settings.uiScale);
+		if (powerupImageSceneTarget != null && powerupImageSceneTarget.width == width && powerupImageSceneTarget.height == height)
+			return;
+		if (powerupImageSceneTarget != null) {
+			if (powerupImageSceneTarget.depthBuffer != null)
+				powerupImageSceneTarget.depthBuffer.dispose();
+			powerupImageSceneTarget.dispose();
+		}
+		powerupImageSceneTarget = new Texture(width, height, [Target]);
+		powerupImageSceneTarget.depthBuffer = new DepthBuffer(width, height);
+		if (powerupImageSceneTargetBitmap == null)
+			powerupImageSceneTargetBitmap = new Bitmap(Tile.fromTexture(powerupImageSceneTarget), scene2d);
+		else
+			powerupImageSceneTargetBitmap.tile = Tile.fromTexture(powerupImageSceneTarget);
+	}
+
+	/**
+		Position and scale the pieces that live directly on the scene rather than inside
+		`playGuiCtrl`, so they are not covered by the gui control re-layout.
+	**/
+	function layoutOverlays() {
+		if (gemImageSceneTargetBitmap != null) {
+			gemImageSceneTargetBitmap.x = -8 * Settings.uiScale;
+			gemImageSceneTargetBitmap.y = -8 * Settings.uiScale;
+			// The target is already uiScale sized, so this only corrects the ceil rounding
+			gemImageSceneTargetBitmap.setScale(GEM_TARGET_SIZE * Settings.uiScale / gemImageSceneTarget.width);
+		}
+		if (powerupImageSceneTargetBitmap != null) {
+			powerupImageSceneTargetBitmap.x = scene2d.width - 88 * Settings.uiScale;
+			powerupImageSceneTargetBitmap.y = 18 * Settings.uiScale;
+			powerupImageSceneTargetBitmap.scaleX = POWERUP_TARGET_WIDTH * Settings.uiScale / powerupImageSceneTarget.width;
+			powerupImageSceneTargetBitmap.scaleY = POWERUP_TARGET_HEIGHT * Settings.uiScale / powerupImageSceneTarget.height;
+		}
+		if (RSGOCenterText != null)
+			layoutCenterText();
+	}
+
+	/**
+		Fonts bake their size in when they are built, so the help and alert text needs a
+		fresh one whenever `Settings.uiScale` changes rather than just a re-layout.
+	**/
+	function buildTextFont():h2d.Font {
 		var domcasual32fontdata = ResourceLoader.getFileEntry("data/font/DomCasualD.fnt");
 		var domcasual32b = new BitmapFont(domcasual32fontdata.entry);
 		@:privateAccess domcasual32b.loader = ResourceLoader.loader;
-		var bfont = domcasual32b.toSdfFont(cast 26 * Settings.uiScale, MultiChannel);
+		return domcasual32b.toSdfFont(cast 26 * Settings.uiScale, MultiChannel);
+	}
+
+	function rebuildTextFonts() {
+		if (helpTextForeground == null)
+			return;
+		var bfont = buildTextFont();
+		helpTextForeground.text.font = bfont;
+		helpTextBackground.text.font = bfont;
+		alertTextForeground.text.font = bfont;
+		alertTextBackground.text.font = bfont;
+	}
+
+	function initTexts() {
+		var bfont = buildTextFont();
 
 		var helpTextCtrl = new GuiControl();
 		helpTextCtrl.position = new Vector(0, 210);
@@ -336,7 +424,7 @@ class PlayGui {
 
 		helpTextBackground = new GuiText(bfont);
 		helpTextBackground.text.textColor = 0x000000;
-		helpTextBackground.position = new Vector(1, 1);
+		helpTextBackground.position = new Vector(TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
 		helpTextBackground.extent = new Vector(640, 14);
 		helpTextBackground.vertSizing = Height;
 		helpTextBackground.horizSizing = Width;
@@ -361,7 +449,7 @@ class PlayGui {
 
 		alertTextBackground = new GuiText(bfont);
 		alertTextBackground.text.textColor = 0x000000;
-		alertTextBackground.position = new Vector(1, 1);
+		alertTextBackground.position = new Vector(TEXT_SHADOW_OFFSET, TEXT_SHADOW_OFFSET);
 		alertTextBackground.extent = new Vector(640, 32);
 		alertTextBackground.vertSizing = Height;
 		alertTextBackground.horizSizing = Width;

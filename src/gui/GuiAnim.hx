@@ -12,6 +12,7 @@ class GuiAnim extends GuiControl {
 
 	public function new(textures:Array<Tile>) {
 		super();
+		GuiControl.useNearestFilterAll(textures);
 		this.anim = new Anim(textures, 0);
 	}
 

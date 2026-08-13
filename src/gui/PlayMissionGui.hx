@@ -46,9 +46,9 @@ class PlayMissionGui extends GuiImage {
 	public function new() {
 		MissionList.buildMissionList();
 
+		// Open on the first level of the category rather than wherever progression reached
 		if (currentSelectionStatic == -1)
-			currentSelectionStatic = cast Math.min(MissionList.beginnerMissions.length - 1,
-				Settings.progression[["beginner", "intermediate", "advanced"].indexOf(currentCategory)]);
+			currentSelectionStatic = 0;
 
 		currentSelection = PlayMissionGui.currentSelectionStatic;
 		currentCategory = PlayMissionGui.currentCategoryStatic;
@@ -79,6 +79,7 @@ class PlayMissionGui extends GuiImage {
 		var tabAdvanced = new GuiImage(ResourceLoader.getResource("data/ui/play/tab_adv.png", ResourceLoader.getImage, this.imageResources).toTile());
 		tabAdvanced.position = new Vector(410, 21);
 		tabAdvanced.extent = new Vector(166, 43);
+		tabAdvanced.controllerTipOffset = new Vector(134, 19);
 		tabAdvanced.pressedAction = (sender) -> {
 			currentList = MissionList.advancedMissions;
 			currentCategory = "advanced";
@@ -89,36 +90,13 @@ class PlayMissionGui extends GuiImage {
 		var tabIntermediate = new GuiImage(ResourceLoader.getResource("data/ui/play/tab_inter.png", ResourceLoader.getImage, this.imageResources).toTile());
 		tabIntermediate.position = new Vector(213, 6);
 		tabIntermediate.extent = new Vector(205, 58);
+		tabIntermediate.controllerTipOffset = new Vector(175, 33);
 		tabIntermediate.pressedAction = (sender) -> {
 			currentList = MissionList.intermediateMissions;
 			currentCategory = "intermediate";
 			setCategoryFunc("intermediate");
 		}
 		localContainer.addChild(tabIntermediate);
-
-		var tabCustom = new GuiImage(ResourceLoader.getResource("data/ui/play/cust_tab.png", ResourceLoader.getImage, this.imageResources).toTile());
-		tabCustom.position = new Vector(589, 91);
-		tabCustom.extent = new Vector(52, 198);
-		tabCustom.pressedAction = (sender) -> {
-			#if (js || android)
-			var mbo = new MessageBoxYesNoDlg("The custom level browser is not available in this game.\n Please play Marble Blast Platinum to get access to 7000+ community made customs of both Marble Blast Gold and Marble Blast Platinum. Visit download link?",
-				() -> {
-					#if sys
-					hxd.System.openURL("https://github.com/RandomityGuy/MBHaxe");
-					#end
-					#if js
-					js.Browser.window.open("https://github.com/RandomityGuy/MBHaxe");
-					#end
-				}, () -> {});
-
-			MarbleGame.canvas.pushDialog(mbo);
-			#else
-			currentList = MissionList.customMissions;
-			currentCategory = "custom";
-			setCategoryFunc("custom");
-			#end
-		}
-		localContainer.addChild(tabCustom);
 
 		var pmBox = new GuiImage(ResourceLoader.getResource("data/ui/play/playgui.png", ResourceLoader.getImage, this.imageResources).toTile());
 		pmBox.position = new Vector(0, 42);
@@ -145,61 +123,6 @@ class PlayMissionGui extends GuiImage {
 		var filt = new ColorMatrix(Matrix.I());
 		pmPreview.bmp.filter = filt;
 
-		var replayPlayButton = new GuiImage(ResourceLoader.getResource("data/ui/play/playback.png", ResourceLoader.getImage, this.imageResources).toTile());
-		replayPlayButton.position = new Vector(38, 315);
-		replayPlayButton.extent = new Vector(18, 18);
-		replayPlayButton.pressedAction = (sender) -> {
-			hxd.File.browse((replayToLoad) -> {
-				replayToLoad.load((replayData) -> {
-					var replay = new Replay("");
-					if (!replay.read(replayData)) {
-						cast(this.parent, Canvas).pushDialog(new MessageBoxOkDlg("Cannot load replay."));
-						// Idk do something to notify the user here
-					} else {
-						var repmis = replay.mission;
-
-						// Strip data/ from the mission name
-						if (StringTools.startsWith(repmis, "data/")) {
-							repmis = repmis.substr(5);
-						}
-
-						var mi = MissionList.missions.get(repmis);
-
-						// try with data/ added
-						if (mi == null) {
-							if (!StringTools.contains(repmis, "data/"))
-								repmis = "data/" + repmis;
-							mi = MissionList.missions.get(repmis);
-						}
-
-						var playMis = mi;
-						if (playMis != null) {
-							cast(this.parent, Canvas).marbleGame.watchMissionReplay(playMis, replay, PlayMissionGui);
-						} else {
-							cast(this.parent, Canvas).pushDialog(new MessageBoxOkDlg("Cannot load replay."));
-						}
-					}
-				});
-			}, {
-				title: "Select replay file",
-				fileTypes: [
-					{
-						name: "Replay (*.mbr)",
-						extensions: ["mbr"]
-					}
-				],
-			});
-		};
-		pmBox.addChild(replayPlayButton);
-
-		var replayRecordButton = new GuiImage(ResourceLoader.getResource("data/ui/play/record.png", ResourceLoader.getImage, this.imageResources).toTile());
-		replayRecordButton.position = new Vector(56, 315);
-		replayRecordButton.extent = new Vector(18, 18);
-		replayRecordButton.pressedAction = (sender) -> {
-			cast(this.parent, Canvas).marbleGame.toRecord = true;
-			cast(this.parent, Canvas).pushDialog(new MessageBoxOkDlg("The next mission you play will be recorded."));
-		};
-		pmBox.addChild(replayRecordButton);
 
 		var levelWnd = new GuiImage(ResourceLoader.getResource("data/ui/play/level_window.png", ResourceLoader.getImage, this.imageResources).toTile());
 		levelWnd.position = new Vector();
@@ -250,7 +173,7 @@ class PlayMissionGui extends GuiImage {
 		var pmPlay = new GuiButton(loadButtonImages("data/ui/play/play"));
 		pmPlay.position = new Vector(391, 257);
 		pmPlay.extent = new Vector(121, 62);
-		pmPlay.gamepadAccelerator = ["A"];
+		pmPlay.controllerTipOffset = new Vector(90, 39);
 		pmPlay.pressedAction = (sender) -> {
 			// Wacky hacks
 			currentList[currentSelection].index = currentSelection;
@@ -264,8 +187,20 @@ class PlayMissionGui extends GuiImage {
 		var pmPrev = new GuiButton(loadButtonImages("data/ui/play/prev"));
 		pmPrev.position = new Vector(321, 260);
 		pmPrev.extent = new Vector(77, 58);
-		pmPrev.gamepadAccelerator = ["dpadLeft"];
+		pmPrev.controllerTipOffset = new Vector(54, 39);
 		pmPrev.pressedAction = (sender) -> {
+			// Before the first level of a category, drop back to the last level of the
+			// previous one, mirroring how next rolls forward
+			if (currentSelection <= 0) {
+				var order = ["beginner", "intermediate", "advanced"];
+				var idx = order.indexOf(currentCategory);
+				if (idx > 0) {
+					currentCategory = order[idx - 1];
+					setCategoryFunc(currentCategory);
+					setSelectedFunc(currentList.length - 1);
+				}
+				return;
+			}
 			setSelectedFunc(currentSelection - 1);
 		}
 		pmBox.addChild(pmPrev);
@@ -273,8 +208,19 @@ class PlayMissionGui extends GuiImage {
 		var pmNext = new GuiButton(loadButtonImages("data/ui/play/next"));
 		pmNext.position = new Vector(507, 262);
 		pmNext.extent = new Vector(75, 60);
-		pmNext.gamepadAccelerator = ["dpadRight"];
+		pmNext.controllerTipOffset = new Vector(55, 41);
 		pmNext.pressedAction = (sender) -> {
+			// Past the last level of a category, roll over into the first level of the next
+			// one rather than dead ending
+			if (currentSelection >= currentList.length - 1) {
+				var order = ["beginner", "intermediate", "advanced"];
+				var idx = order.indexOf(currentCategory);
+				if (idx != -1 && idx < order.length - 1) {
+					currentCategory = order[idx + 1];
+					setCategoryFunc(currentCategory);
+				}
+				return;
+			}
 			setSelectedFunc(currentSelection + 1);
 		}
 		pmBox.addChild(pmNext);
@@ -311,9 +257,10 @@ class PlayMissionGui extends GuiImage {
 		var pmBack = new GuiButton(loadButtonImages("data/ui/play/back"));
 		pmBack.position = new Vector(102, 260);
 		pmBack.extent = new Vector(79, 61);
+		pmBack.controllerTipOffset = new Vector(60, 40);
 		pmBack.gamepadAccelerator = ["B"];
 		pmBack.pressedAction = (sender) -> {
-			cast(this.parent, Canvas).setContent(new MainMenuGui());
+			cast(this.parent, Canvas).setContent(new MainMenuGui(), () -> new MainMenuGui());
 		};
 		pmBox.addChild(pmBack);
 
@@ -322,6 +269,9 @@ class PlayMissionGui extends GuiImage {
 		var transparentTile = Tile.fromBitmap(transparentbmp);
 
 		var skipButton = new GuiButton([transparentTile, transparentTile, transparentTile]);
+		// Invisible and tucked into the screen corner, so the gamepad highlight must not
+		// be able to land on it
+		skipButton.controllerFocusable = false;
 		skipButton.horizSizing = Left;
 		skipButton.vertSizing = Top;
 		skipButton.position = new Vector(625, 465);
@@ -380,6 +330,7 @@ class PlayMissionGui extends GuiImage {
 		var tabBeginner = new GuiImage(ResourceLoader.getResource("data/ui/play/tab_begin.png", ResourceLoader.getImage, this.imageResources).toTile());
 		tabBeginner.position = new Vector(29, 2);
 		tabBeginner.extent = new Vector(184, 55);
+		tabBeginner.controllerTipOffset = new Vector(149, 27);
 		tabBeginner.pressedAction = (sender) -> {
 			currentList = MissionList.beginnerMissions;
 			currentCategory = "beginner";
@@ -394,14 +345,12 @@ class PlayMissionGui extends GuiImage {
 			localContainer.removeChild(tabBeginner);
 			localContainer.removeChild(tabIntermediate);
 			localContainer.removeChild(tabAdvanced);
-			localContainer.removeChild(tabCustom);
 			localContainer.removeChild(pmBox);
 			if (doRender)
 				AudioManager.playSound(ResourceLoader.getResource("data/sound/buttonpress.wav", ResourceLoader.getAudio, this.soundResources));
 			if (category == "beginner") {
 				localContainer.addChild(tabIntermediate);
 				localContainer.addChild(tabAdvanced);
-				localContainer.addChild(tabCustom);
 				localContainer.addChild(pmBox);
 				localContainer.addChild(tabBeginner);
 				currentList = MissionList.beginnerMissions;
@@ -409,7 +358,6 @@ class PlayMissionGui extends GuiImage {
 			if (category == "intermediate") {
 				localContainer.addChild(tabBeginner);
 				localContainer.addChild(tabAdvanced);
-				localContainer.addChild(tabCustom);
 				localContainer.addChild(pmBox);
 				localContainer.addChild(tabIntermediate);
 				currentList = MissionList.intermediateMissions;
@@ -417,24 +365,13 @@ class PlayMissionGui extends GuiImage {
 			if (category == "advanced") {
 				localContainer.addChild(tabBeginner);
 				localContainer.addChild(tabIntermediate);
-				localContainer.addChild(tabCustom);
 				localContainer.addChild(pmBox);
 				localContainer.addChild(tabAdvanced);
 				currentList = MissionList.advancedMissions;
 			}
-			if (category == "custom") {
-				localContainer.addChild(tabBeginner);
-				localContainer.addChild(tabIntermediate);
-				localContainer.addChild(tabAdvanced);
-				localContainer.addChild(pmBox);
-				localContainer.addChild(tabCustom);
-				currentList = MissionList.customMissions;
-			}
 			currentCategoryStatic = currentCategory;
-			if (currentCategory != "custom")
-				setSelectedFunc(cast Math.min(currentList.length - 1, Settings.progression[["beginner", "intermediate", "advanced"].indexOf(currentCategory)]));
-			else
-				setSelectedFunc(currentList.length - 1);
+			// Entering a category always lands on its first level
+			setSelectedFunc(0);
 			if (doRender)
 				this.render(cast(this.parent, Canvas).scene2d);
 		}
@@ -482,11 +419,20 @@ class PlayMissionGui extends GuiImage {
 
 			var currentMission = currentList[currentSelection];
 
-			if (index == 0) {
+			var prevOrder = ["beginner", "intermediate", "advanced"];
+			var prevCatIdx = prevOrder.indexOf(currentCategory);
+			// Only a dead end at the very first level, since prev otherwise drops back into
+			// the previous category
+			if (index == 0 && prevCatIdx <= 0) {
 				pmPrev.disabled = true;
 			} else
 				pmPrev.disabled = false;
-			if (index == Math.max(currentList.length - 1, 0)) {
+			// Only a dead end on the last level of the last category, since next otherwise
+			// rolls over into the following one
+			var order = ["beginner", "intermediate", "advanced"];
+			var catIdx = order.indexOf(currentCategory);
+			var hasNextCategory = catIdx != -1 && catIdx < order.length - 1;
+			if (index == Math.max(currentList.length - 1, 0) && !hasNextCategory) {
 				pmNext.disabled = true;
 			} else
 				pmNext.disabled = false;
@@ -586,6 +532,12 @@ class PlayMissionGui extends GuiImage {
 
 			levelFgnd.text.text = currentCategory.charAt(0).toUpperCase() + currentCategory.substr(1) + ' Level ${currentSelection + 1}';
 		}
+
+		// The tab row sits above the button row, so the plain spatial search lands on the
+		// wrong control. Wire the vertical moves between the two rows explicitly.
+		pmNext.controllerNavUp = tabAdvanced;
+		pmPrev.controllerNavUp = tabIntermediate;
+		tabIntermediate.controllerNavDown = pmPlay;
 
 		setCategoryFunc(currentCategoryStatic, false);
 

@@ -90,7 +90,7 @@ class ReplayCenterGui extends GuiImage {
 		homeButton.position = new Vector(224, 386);
 		homeButton.extent = new Vector(94, 46);
 		homeButton.pressedAction = (e) -> {
-			MarbleGame.canvas.setContent(new MainMenuGui());
+			MarbleGame.canvas.setContent(new MainMenuGui(), () -> new MainMenuGui());
 		}
 		wnd.addChild(homeButton);
 

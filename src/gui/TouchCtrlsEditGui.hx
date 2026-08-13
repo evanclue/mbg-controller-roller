@@ -36,7 +36,7 @@ class TouchCtrlsEditGui extends GuiImage {
 		mainMenuButton.horizSizing = Left;
 		mainMenuButton.vertSizing = Top;
 		mainMenuButton.pressedAction = (sender) -> {
-			MarbleGame.canvas.setContent(new OptionsDlg());
+			MarbleGame.canvas.setContent(new OptionsDlg(), () -> new OptionsDlg());
 		}
 
 		var touchControlsTxt = new GuiText(domcasual32);

@@ -25,16 +25,8 @@ class MainMenuGui extends GuiImage {
 		this.vertSizing = Height;
 		this.position = new Vector();
 		this.extent = new Vector(640, 480);
-
-		var versionText = new GuiText(domcasual32);
-
-		versionText.horizSizing = Center;
-		versionText.vertSizing = Top;
-		versionText.position = new Vector(289, 450);
-		versionText.extent = new Vector(62, 18);
-		versionText.text.text = MarbleGame.currentVersion;
-		versionText.text.textColor = 0;
-		this.addChild(versionText);
+		// Single column of buttons, so left and right have nowhere sensible to go
+		this.controllerVerticalOnly = true;
 
 		var homebase = new GuiImage(ResourceLoader.getResource("data/ui/home/homegui.png", ResourceLoader.getImage, this.imageResources).toTile());
 		homebase.horizSizing = Center;
@@ -60,50 +52,40 @@ class MainMenuGui extends GuiImage {
 		var playButton = new GuiButton(loadButtonImages("data/ui/home/play"));
 		playButton.position = new Vector(50, 113);
 		playButton.extent = new Vector(270, 95);
-		playButton.gamepadAccelerator = ["A"];
+		playButton.controllerTipOffset = new Vector(242, 73);
 		playButton.pressedAction = (sender) -> {
-			cast(this.parent, Canvas).setContent(new PlayMissionGui());
+			cast(this.parent, Canvas).setContent(new PlayMissionGui(), () -> new PlayMissionGui());
 		}
 		homebase.addChild(playButton);
 
 		var helpButton = new GuiButton(loadButtonImages("data/ui/home/help"));
 		helpButton.position = new Vector(59, 200);
 		helpButton.extent = new Vector(242, 84);
+		helpButton.controllerTipOffset = new Vector(219, 57);
 		helpButton.pressedAction = (sender) -> {
-			MarbleGame.canvas.setContent(new HelpCreditsGui());
+			MarbleGame.canvas.setContent(new HelpCreditsGui(), () -> new HelpCreditsGui());
 		}
 		homebase.addChild(helpButton);
 
 		var optionsButton = new GuiButton(loadButtonImages("data/ui/home/options"));
 		optionsButton.position = new Vector(55, 279);
 		optionsButton.extent = new Vector(253, 83);
+		optionsButton.controllerTipOffset = new Vector(230, 63);
 		optionsButton.pressedAction = (sender) -> {
-			cast(this.parent, Canvas).setContent(new OptionsDlg());
+			cast(this.parent, Canvas).setContent(new OptionsDlg(), () -> new OptionsDlg());
 		}
 		homebase.addChild(optionsButton);
 
 		var exitButton = new GuiButton(loadButtonImages("data/ui/home/exit"));
 		exitButton.position = new Vector(82, 358);
 		exitButton.extent = new Vector(203, 88);
+		exitButton.controllerTipOffset = new Vector(178, 51);
 		exitButton.pressedAction = (sender) -> {
 			#if hl
 			Sys.exit(0);
 			#end
 		};
 		homebase.addChild(exitButton);
-
-		var changelogButton = new GuiButtonText(loadButtonImages("data/ui/motd/motd_buttn_textless"), domcasual24);
-		changelogButton.txtCtrl.text.text = "Changelog";
-		changelogButton.txtCtrl.text.textColor = 0;
-		changelogButton.ratio = 0.35;
-		changelogButton.horizSizing = Left;
-		changelogButton.vertSizing = Top;
-		changelogButton.position = new Vector(530, 394);
-		changelogButton.setExtent(new Vector(106, 85));
-		changelogButton.pressedAction = (sender) -> {
-			MarbleGame.canvas.pushDialog(new VersionGui());
-		}
-		this.addChild(changelogButton);
 
 		#if js
 		var mbp = new GuiButton(loadStaticButtonImages("data/ui/icon_mbp"));
@@ -137,34 +119,5 @@ class MainMenuGui extends GuiImage {
 		this.addChild(discord);
 		#end
 
-		var kofi = new GuiButton(loadButtonImages("data/ui/kofi1"));
-		kofi.horizSizing = Left;
-		kofi.vertSizing = Top;
-		kofi.position = new Vector(473, 354);
-		kofi.extent = new Vector(143, 36);
-		kofi.pressedAction = (sender) -> {
-			#if sys
-			hxd.System.openURL("https://ko-fi.com/H2H5FRTTL");
-			#end
-			#if js
-			js.Browser.window.open("https://ko-fi.com/H2H5FRTTL");
-			#end
-		}
-		this.addChild(kofi);
-
-		var github = new GuiButton(loadButtonImages("data/ui/github"));
-		github.horizSizing = Left;
-		github.vertSizing = Top;
-		github.position = new Vector(522, 310);
-		github.extent = new Vector(94, 38);
-		github.pressedAction = (sender) -> {
-			#if sys
-			hxd.System.openURL("https://github.com/RandomityGuy/MBHaxe");
-			#end
-			#if js
-			js.Browser.window.open("https://github.com/RandomityGuy/MBHaxe");
-			#end
-		}
-		this.addChild(github);
 	}
 }

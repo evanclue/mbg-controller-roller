@@ -186,7 +186,23 @@ class MarbleGame {
 		Analytics.trackPlatformInfo();
 	}
 
+	/**
+		Set when a resize changed `Settings.uiScale`, consumed at the top of the next update
+		so the screen is never rebuilt from inside the handler that triggered the resize.
+	**/
+	public static var uiScaleDirty = false;
+
 	public function update(dt:Float) {
+		if (uiScaleDirty) {
+			uiScaleDirty = false;
+			if (canvas != null)
+				canvas.rebuildContent();
+		}
+		#if (hl && hlsdl)
+		// Only expose keystrokes to the compositor's input method while a text field is
+		// focused, otherwise it eats held movement keys (see SdlTextInput)
+		SdlTextInput.set(canvas != null && canvas.scene2d.getFocus() != null);
+		#end
 		Net.checkPacketTimeout(dt);
 		if (world != null) {
 			if (world._disposed) {

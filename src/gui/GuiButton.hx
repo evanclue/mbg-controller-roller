@@ -32,6 +32,23 @@ class GuiButton extends GuiAnim {
 	public var gamepadAccelerator:Array<String> = [];
 	public var acceleratorWasPressed = false;
 
+	/**
+		A focused button draws its hover bitmap exactly as if the mouse were over it, see
+		the frame logic in `update`. Invisible buttons opt out through `controllerFocusable`,
+		since a fully transparent button still reports itself as visible.
+	**/
+	override function isControllerTarget():Bool {
+		return controllerFocusable && !disabled && this.anim != null && this.anim.visible;
+	}
+
+	override function controllerActivate():Void {
+		if (disabled || pressedAction == null)
+			return;
+		if (buttonSounds)
+			AudioManager.playSound(ResourceLoader.getResource("data/sound/buttonpress.wav", ResourceLoader.getAudio, this.soundResources));
+		pressedAction(new GuiEvent(this));
+	}
+
 	public function new(anim:Array<Tile>) {
 		super(anim);
 	}
@@ -43,9 +60,11 @@ class GuiButton extends GuiAnim {
 				AudioManager.playSound(ResourceLoader.getResource("data/sound/buttonpress.wav", ResourceLoader.getAudio, this.soundResources));
 			}
 		}
+		var mouseOver = renderRect.inRect(mouseState.position);
+		var hovered = mouseOver || controllerFocused;
 		if (buttonType == Normal) {
-			if (renderRect.inRect(mouseState.position) && !disabled) {
-				if (Key.isDown(Key.MOUSE_LEFT)) {
+			if (hovered && !disabled) {
+				if ((mouseOver && Key.isDown(Key.MOUSE_LEFT)) || controllerPressed) {
 					this.anim.currentFrame = 2;
 					pressed = true;
 				} else {
@@ -61,8 +80,8 @@ class GuiButton extends GuiAnim {
 			if (this.pressed) {
 				this.anim.currentFrame = 2;
 			} else {
-				if (renderRect.inRect(mouseState.position) && !disabled) {
-					if (Key.isDown(Key.MOUSE_LEFT)) {
+				if (hovered && !disabled) {
+					if ((mouseOver && Key.isDown(Key.MOUSE_LEFT)) || controllerPressed) {
 						this.anim.currentFrame = 2;
 					} else if (!Key.isReleased(Key.MOUSE_LEFT)) {
 						this.anim.currentFrame = 1;
@@ -73,7 +92,10 @@ class GuiButton extends GuiAnim {
 			}
 		}
 		if (!disabled) {
-			if (acceleratorWasPressed && (accelerator != 0 && hxd.Key.isReleased(accelerator)) || Gamepad.isReleased(gamepadAccelerator)) {
+			// The release only counts if this button saw the matching press. Without the
+			// grouping, any release fired the action, so a press that changed screens was
+			// caught again by whatever button was bound on the new screen.
+			if (acceleratorWasPressed && ((accelerator != 0 && hxd.Key.isReleased(accelerator)) || Gamepad.isReleased(gamepadAccelerator))) {
 				if (this.pressedAction != null) {
 					this.pressedAction(new GuiEvent(this));
 				}

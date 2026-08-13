@@ -47,7 +47,6 @@ class MessageBoxYesNoDlg extends GuiControl {
 		yesButton.extent = new Vector(82, 47);
 		yesButton.vertSizing = Top;
 		yesButton.accelerator = hxd.Key.ENTER;
-		yesButton.gamepadAccelerator = ["A"];
 		yesButton.pressedAction = (sender) -> {
 			MarbleGame.canvas.popDialog(this);
 			yesFunc();

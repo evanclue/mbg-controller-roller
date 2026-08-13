@@ -48,7 +48,6 @@ class ExitGameDlg extends GuiControl {
 		yesButton.horizSizing = Right;
 		yesButton.pressedAction = (e) -> yesFunc(this);
 		yesButton.accelerator = hxd.Key.ENTER;
-		yesButton.gamepadAccelerator = ["A"];
 
 		var noButton = new GuiButton(loadButtonImages("data/ui/common/no"));
 		noButton.position = new Vector(151, 107);

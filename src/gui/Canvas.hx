@@ -24,11 +24,34 @@ class Canvas extends GuiControl {
 		this.vertSizing = Height;
 	}
 
-	public function setContent(content:GuiControl) {
+	/**
+		Set by screens that can be thrown away and built again from nothing, which lets
+		`rebuildContent` re-create them after `Settings.uiScale` changes. Screens that carry
+		state worth keeping simply leave this null and keep their old font sizes.
+	**/
+	var contentFactory:Void->GuiControl = null;
+
+	/** Gamepad menu highlight, created lazily once resources are available. **/
+	var cursor:ControllerCursor = null;
+
+	public function setContent(content:GuiControl, ?factory:Void->GuiControl) {
 		this.dispose();
 		this.content = content;
+		this.contentFactory = factory;
 		this.addChild(content);
 		this.render(scene2d);
+	}
+
+	/**
+		Rebuild the current screen so it picks up the current `Settings.uiScale`. Fonts bake
+		their size in at construction, so re-laying out the existing controls is not enough.
+	**/
+	public function rebuildContent() {
+		if (contentFactory == null)
+			return false;
+		var factory = contentFactory;
+		setContent(factory(), factory);
+		return true;
 	}
 
 	public function pushDialog(content:GuiControl) {
@@ -54,6 +77,10 @@ class Canvas extends GuiControl {
 		if (children.length > 0) {
 			children[children.length - 1].update(dt, mouseState);
 		}
+		if (cursor == null)
+			cursor = new ControllerCursor(scene2d);
+		// The topmost child is the active screen, so a pushed dialog takes the highlight
+		cursor.update(dt, children.length > 0 ? children[children.length - 1] : null);
 	}
 
 	public override function renderEngine(e:h3d.Engine) {

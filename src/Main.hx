@@ -1,6 +1,5 @@
 package;
 
-import gui.VersionGui;
 import src.Debug;
 import src.Marbleland;
 import src.Console;
@@ -102,8 +101,7 @@ class Main extends hxd.App {
 				AudioManager.init();
 				AudioManager.playShell();
 				marbleGame = new MarbleGame(s2d, s3d);
-				MarbleGame.canvas.setContent(new MainMenuGui());
-				VersionGui.checkVersion();
+				MarbleGame.canvas.setContent(new MainMenuGui(), () -> new MainMenuGui());
 
 				new ProfilerUI(s2d);
 

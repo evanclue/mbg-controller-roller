@@ -99,7 +99,7 @@ class OptionsDlg extends GuiImage {
 		mainMenuButton.extent = new Vector(121, 53);
 		mainMenuButton.pressedAction = (sender) -> {
 			applyFunc();
-			MarbleGame.canvas.setContent(new MainMenuGui());
+			MarbleGame.canvas.setContent(new MainMenuGui(), () -> new MainMenuGui());
 		}
 		mainPane.addChild(mainMenuButton);
 
@@ -670,7 +670,7 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 			touchControlsEdit.txtCtrl.text.text = "Edit";
 			touchControlsEdit.setExtent(new Vector(109, 39));
 			touchControlsEdit.pressedAction = (sender) -> {
-				MarbleGame.canvas.setContent(new TouchCtrlsEditGui());
+				MarbleGame.canvas.setContent(new TouchCtrlsEditGui(), () -> new TouchCtrlsEditGui());
 			}
 
 			controlsPane.addChild(touchControlsTxt);

@@ -479,8 +479,8 @@ class Settings {
 			#end
 			progression = json.progression;
 			highscoreName = json.highscoreName;
-			if (highscoreName == null) {
-				highscoreName = "";
+			if (highscoreName == null || highscoreName == "") {
+				highscoreName = defaultPlayerName();
 			}
 			userId = json.userId;
 			if (userId == null || userId == "") {
@@ -495,12 +495,60 @@ class Settings {
 		#end
 	}
 
+	/**
+		Resolution at which the menu and HUD draw at 1x. Half of 1080p, so a 1080p screen
+		gets a 2x ui and everything above scales up proportionally from there.
+	**/
+	public static inline var UI_REFERENCE_WIDTH = 960.0;
+
+	public static inline var UI_REFERENCE_HEIGHT = 540.0;
+
+	/**
+		The multiplier every gui position, extent, image and font size is built against
+		(see `gui.GuiControl.getRenderRectangle`). It combines the display's backing scale
+		with a fractional factor derived from the window resolution, so the ui keeps the
+		same apparent size at 1440p, 4K and beyond instead of staying pinned to 1x pixels.
+	**/
+	/**
+		Name used for high score entries. This build targets gamepad play, where there is no
+		practical way to type, so it comes from the desktop user account instead of asking.
+	**/
+	public static function defaultPlayerName():String {
+		#if hl
+		for (key in ["USER", "LOGNAME", "USERNAME"]) {
+			var value = Sys.getEnv(key);
+			if (value != null && StringTools.trim(value) != "")
+				return StringTools.trim(value);
+		}
+		#end
+		return "Player";
+	}
+
+	public static function computeUiScale():Float {
+		var wnd = Window.getInstance();
+		#if hl
+		// windowToPixelRatio is window/pixel, so its inverse is the display backing scale
+		var backingScale = 1 / wnd.windowToPixelRatio;
+		#else
+		var backingScale = 1.0;
+		#end
+		// Take the smaller axis so the 4:3 authored layout never overflows a short window
+		var resolutionScale = Math.min(wnd.width / UI_REFERENCE_WIDTH, wnd.height / UI_REFERENCE_HEIGHT);
+		// The assets have no sub-1x source, and shrinking them would break small windows
+		if (resolutionScale < 1)
+			resolutionScale = 1;
+		return backingScale * resolutionScale;
+	}
+
 	public static function init() {
 		load();
+		// Covers a missing settings file, where load() never reaches the name
+		if (highscoreName == null || highscoreName == "")
+			highscoreName = defaultPlayerName();
 		#if hl
 		Window.getInstance().resize(optionsSettings.screenWidth, optionsSettings.screenHeight);
 		Window.getInstance().displayMode = optionsSettings.isFullScreen ? FullscreenResize : Windowed;
-		uiScale = 1 / Window.getInstance().windowToPixelRatio;
+		uiScale = computeUiScale();
 		#end
 		#if js
 		Window.getInstance().propagateKeyEvents = true;
@@ -525,6 +573,14 @@ class Settings {
 			#if hl
 			Settings.optionsSettings.screenWidth = cast wnd.width;
 			Settings.optionsSettings.screenHeight = cast wnd.height;
+			var newUiScale = computeUiScale();
+			if (newUiScale != uiScale) {
+				uiScale = newUiScale;
+				// Positions, extents and images pick this up on the render below, but font
+				// sizes are baked when a screen is constructed, so the screen has to be
+				// rebuilt. Defer it - we may be inside a gui handler that resized us.
+				MarbleGame.uiScaleDirty = true;
+			}
 			#end
 			#if js
 			Settings.optionsSettings.screenWidth = cast Math.max(js.Browser.window.screen.width,

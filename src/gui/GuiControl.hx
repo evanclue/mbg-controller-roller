@@ -6,6 +6,7 @@ import hxd.res.Image;
 import h2d.Graphics;
 import hxd.Key;
 import h2d.Scene;
+import h2d.Tile;
 import h2d.col.Bounds;
 import hxd.Window;
 import h3d.Vector;
@@ -62,9 +63,93 @@ class GuiControl {
 
 	var _manualScroll = false;
 
+	/** Whether the gamepad highlight is allowed to land on this control. **/
+	var controllerFocusable:Bool = true;
+
+	/**
+		Exact spot the cursor's fingertip should land on, measured from this control's top
+		left in unscaled gui units, which for the menu art is the same as pixels in the
+		source png. Leave null to fall back to the generic bottom right corner placement.
+	**/
+	var controllerTipOffset:h3d.Vector = null;
+
+	/** Set by `ControllerCursor` on the control the highlight is currently on. **/
+	var controllerFocused:Bool = false;
+
+	var controllerPressed:Bool = false;
+
+	/**
+		Set on a screen whose controls are laid out in a single column, so left and right
+		are ignored rather than jumping somewhere arbitrary.
+	**/
+	var controllerVerticalOnly:Bool = false;
+
+	/**
+		Force where the highlight goes from this control in a given direction, overriding the
+		spatial search. Needed where the nearest control is not the one that reads as next,
+		such as the tab row sitting above the level select buttons.
+	**/
+	var controllerNavUp:GuiControl = null;
+
+	var controllerNavDown:GuiControl = null;
+
+	var controllerNavLeft:GuiControl = null;
+
+	var controllerNavRight:GuiControl = null;
+
+	/** Directions match `ControllerCursor`: 0 up, 1 down, 2 left, 3 right. **/
+	function controllerNavOverride(dir:Int):GuiControl {
+		return switch (dir) {
+			case 0: controllerNavUp;
+			case 1: controllerNavDown;
+			case 2: controllerNavLeft;
+			case _: controllerNavRight;
+		};
+	}
+
+	/** Whether the gamepad highlight can select this control. **/
+	function isControllerTarget():Bool {
+		return false;
+	}
+
+	/** Do whatever a click on this control would do. **/
+	function controllerActivate():Void {}
+
 	// var _border:h2d.Graphics = null;
 
+	/**
+		Offset of the drop shadow behind ui text, in unscaled gui units. Multiply by
+		`Settings.uiScale` at the point of use so it grows with the ui rather than thinning
+		out to a hairline at high resolutions.
+	**/
+	public static inline var TEXT_SHADOW_OFFSET = 2;
+
+	/** The same shadow expressed as a 45 degree down-right distance, for `DropShadow`. **/
+	public static function textShadowDistance() {
+		return TEXT_SHADOW_OFFSET * Math.sqrt(2) * Settings.uiScale;
+	}
+
 	public function new() {}
+
+	/**
+		The ui art is low resolution and is now drawn well above 1x, so let it scale with
+		hard pixel edges instead of the default bilinear smear. Textures are cached per
+		path and only ever used by the ui, so setting this on the tile is safe.
+	**/
+	public static function useNearestFilter(tile:Tile) {
+		if (tile == null)
+			return;
+		var tex = tile.getTexture();
+		if (tex != null)
+			tex.filter = Nearest;
+	}
+
+	public static function useNearestFilterAll(tiles:Array<Tile>) {
+		if (tiles == null)
+			return;
+		for (tile in tiles)
+			useNearestFilter(tile);
+	}
 
 	public function render(scene2d:Scene, ?parent:Flow) {
 		if (this._flow == null) {

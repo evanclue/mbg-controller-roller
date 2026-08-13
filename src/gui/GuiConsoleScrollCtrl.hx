@@ -44,6 +44,7 @@ class GuiConsoleScrollCtrl extends GuiControl {
 
 	public function new(scrollBar:Tile) {
 		super();
+		GuiControl.useNearestFilter(scrollBar);
 		this.scrollTopTile = scrollBar.sub(0, 37, 18, 8);
 		this.scrollBottomTile = scrollBar.sub(0, 55, 18, 8);
 		this.scrollFillTile = scrollBar.sub(0, 46, 18, 1);

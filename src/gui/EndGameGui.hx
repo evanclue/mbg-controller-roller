@@ -43,7 +43,6 @@ class EndGameGui extends GuiControl {
 		continueButton.position = new Vector(333, 386);
 		continueButton.extent = new Vector(113, 47);
 		continueButton.accelerator = hxd.Key.ENTER;
-		continueButton.gamepadAccelerator = ["A"];
 		continueButton.pressedAction = (e) -> continueFunc(this);
 
 		var restartButton = new GuiButton(loadButtonImages("data/ui/endgame/replay"));
@@ -91,7 +90,7 @@ class EndGameGui extends GuiControl {
 		var congrats = new GuiMLText(expo50, mlFontLoader);
 		congrats.text.textColor = 0xffff00;
 		congrats.text.text = 'Final Time: <font color="#FFF090">${Util.formatTime(timeState.gameplayClock)}</font>';
-		congrats.text.filter = new DropShadow(1.414, 0.785, 0, 1, 0, 0.4, 1, true);
+		congrats.text.filter = new DropShadow(GuiControl.textShadowDistance(), 0.785, 0, 1, 0, 0.4, 1, true);
 		congrats.position = new Vector(43, 24);
 		congrats.extent = new Vector(408, 50);
 		pg.addChild(congrats);
@@ -103,7 +102,7 @@ class EndGameGui extends GuiControl {
 			finishMessage.text.text = timeState.gameplayClock < mission.goldTime ? 'You beat the <font color="#FFFF00">GOLD</font> time!' : "You've qualified!";
 		else
 			finishMessage.text.text = '<font color="#FF0000">You failed to qualify!</font>';
-		finishMessage.text.filter = new DropShadow(1, 0.785, 0, 1, 0, 0.4, 1, true);
+		finishMessage.text.filter = new DropShadow(GuiControl.textShadowDistance(), 0.785, 0, 1, 0, 0.4, 1, true);
 		// finishMessage.justify = Center;
 		finishMessage.position = new Vector(155, 74);
 		if (timeState.gameplayClock < mission.goldTime) {
@@ -126,7 +125,7 @@ class EndGameGui extends GuiControl {
 		for (i in 0...3) {
 			leftColumn.text.text += '${i + 1}. ${scoreData[i].name}<br/>';
 		}
-		leftColumn.text.filter = new DropShadow(1.414, 0.785, 0xffffff, 1, 0, 0.4, 1, true);
+		leftColumn.text.filter = new DropShadow(GuiControl.textShadowDistance(), 0.785, 0xffffff, 1, 0, 0.4, 1, true);
 		leftColumn.position = new Vector(108, 113);
 		leftColumn.extent = new Vector(208, 50);
 		pg.addChild(leftColumn);
@@ -144,7 +143,7 @@ class EndGameGui extends GuiControl {
 			else
 				rightColumn.text.text += '${Util.formatTime(scoreData[i].time)}<br/>';
 		}
-		rightColumn.text.filter = new DropShadow(1.414, 0.785, 0xffffff, 1, 0, 0.4, 1, true);
+		rightColumn.text.filter = new DropShadow(GuiControl.textShadowDistance(), 0.785, 0xffffff, 1, 0, 0.4, 1, true);
 		rightColumn.position = new Vector(274, 113);
 		rightColumn.extent = new Vector(208, 50);
 		pg.addChild(rightColumn);
@@ -159,7 +158,7 @@ class EndGameGui extends GuiControl {
 			else
 				rightColumnGold.text.text += '<br/>';
 		}
-		rightColumnGold.text.filter = new DropShadow(1.414, 0.785, 0x00000, 1, 0, 0.4, 1, true);
+		rightColumnGold.text.filter = new DropShadow(GuiControl.textShadowDistance(), 0.785, 0x00000, 1, 0, 0.4, 1, true);
 		rightColumnGold.position = new Vector(274, 113);
 		rightColumnGold.extent = new Vector(208, 50);
 		pg.addChild(rightColumnGold);
@@ -182,8 +181,9 @@ class EndGameGui extends GuiControl {
 		Settings.save();
 
 		if (idx <= 2) {
-			setButtonStates(false);
-			var end = new EnterNameDlg(idx, (name) -> {
+			// Gamepad players cannot type, so the score is filed under the desktop user
+			// name instead of opening a text entry dialog
+			var submitScore = (name:String) -> {
 				setButtonStates(true);
 				if (scoreSubmitted)
 					return;
@@ -216,8 +216,8 @@ class EndGameGui extends GuiControl {
 				Settings.saveScore(mission.path, myScore);
 
 				scoreSubmitted = true;
-			});
-			this.addChild(end);
+			};
+			submitScore(Settings.highscoreName);
 		}
 	}
 }

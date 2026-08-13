@@ -20,6 +20,7 @@ class GuiImage extends GuiControl {
 
 	public function new(texture:Tile) {
 		super();
+		GuiControl.useNearestFilter(texture);
 		this.bmp = new Bitmap(texture);
 	}
 
@@ -50,6 +51,19 @@ class GuiImage extends GuiControl {
 		if (this.pressedAction != null) {
 			this.pressedAction(new GuiEvent(this));
 		}
+	}
+
+	/**
+		Plain images are only highlight targets when they act as buttons, which is how the
+		difficulty tabs on the level select are built.
+	**/
+	override function isControllerTarget():Bool {
+		return controllerFocusable && pressedAction != null && bmp != null && bmp.visible;
+	}
+
+	override function controllerActivate():Void {
+		if (pressedAction != null)
+			pressedAction(new GuiEvent(this));
 	}
 
 	public override function onRemove() {
