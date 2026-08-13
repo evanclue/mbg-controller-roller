@@ -25,10 +25,15 @@ import src.Console;
 
 class ResourceLoader {
 	#if (hl && !android)
+	static function getFileSystemRoot():String {
+		var packagedRoot = Sys.getEnv("MBG_DATA_ROOT");
+		return packagedRoot == null || packagedRoot == "" ? "." : packagedRoot;
+	}
+
 	#if MACOS_BUNDLE
 	public static var fileSystem:FileSystem = new TorqueFileSystem(Path.normalize(Path.join([Path.directory(Sys.programPath()), "..", "Resources"])), null);
 	#else
-	public static var fileSystem:FileSystem = new TorqueFileSystem(".", null);
+	public static var fileSystem:FileSystem = new TorqueFileSystem(getFileSystemRoot(), null);
 	#end
 	#end
 	#if (js || android)

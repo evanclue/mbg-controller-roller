@@ -237,6 +237,17 @@ class Settings {
 	#if hl
 	#if MACOS_BUNDLE
 	public static var settingsDir = Path.join([Sys.getEnv("HOME"), "Library", "Application Support", "MBHaxe-MBG"]);
+	#elseif linux
+	public static var settingsDir = getLinuxSettingsDir();
+
+	static function getLinuxSettingsDir():String {
+		var configHome = Sys.getEnv("XDG_CONFIG_HOME");
+		if (configHome == null || configHome == "") {
+			var home = Sys.getEnv("HOME");
+			configHome = home == null || home == "" ? "." : Path.join([home, ".config"]);
+		}
+		return Path.join([configHome, "controller-roller"]);
+	}
 	#else
 	public static var settingsDir = ".";
 	#end

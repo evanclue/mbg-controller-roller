@@ -4,7 +4,7 @@ set -euo pipefail
 
 project_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 toolchain_dir=${MBHAXE_TOOLCHAIN:-/home/cachy/mbhaxe-toolchain}
-deploy_dir=${MBG_DEPLOY_DIR:-/home/cachy/Desktop/mrbl/gold}
+deploy_dir=${MBG_DEPLOY_DIR:-$project_dir/dist/MBHaxe-Gold-Linux}
 
 haxe_dir="$toolchain_dir/haxe"
 haxelib_dir="$toolchain_dir/haxelib"
@@ -21,7 +21,7 @@ echo "Generating Linux C sources..."
 "$haxe_dir/haxe" compile-linux.hxml
 
 echo "Linking marblegame..."
-gcc -o marblegame -g \
+gcc -o marblegame -O0 -DNDEBUG \
 	-I native \
 	-I "$prefix_dir/include" \
 	-I "$hashlink_src" \
@@ -36,9 +36,18 @@ gcc -o marblegame -g \
 	"$prefix_dir/lib/ssl.hdll" \
 	"$prefix_dir/lib/datachannel.hdll" \
 	-lSDL2 -lhl -luv -lm
+strip --strip-unneeded marblegame
 
-echo "Deploying to $deploy_dir/marblegame..."
-mkdir -p "$deploy_dir"
-install -m 755 marblegame "$deploy_dir/marblegame"
+echo "Creating portable build in $deploy_dir..."
+MBG_BINARY="$project_dir/marblegame" \
+	MBG_LIBRARY_DIR="$prefix_dir/lib" \
+	MBG_DIST_DIR="$deploy_dir" \
+	"$project_dir/build-portable.sh"
 
-echo "Build complete: $deploy_dir/marblegame"
+echo "Build complete: $deploy_dir/run-mbg.sh"
+
+if [[ ${MBG_BUILD_APPIMAGE:-0} == 1 ]]; then
+	MBG_PORTABLE_DIR="$deploy_dir" \
+		MBG_APPIMAGE_OUTPUT="${MBG_APPIMAGE_OUTPUT:-$project_dir/dist/MBG-Controller-Roller-x86_64.AppImage}" \
+		"$project_dir/build-appimage.sh"
+fi

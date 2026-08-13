@@ -4,6 +4,7 @@
 .vscode
 native
 *.exe
+*.AppImage
 *.obj
 marblegame.hl
 marblegame
@@ -18,6 +19,7 @@ package.json
 package-lock.json
 leaderboards
 out
+dist/
 server
 mpcustom
 
@@ -26,4 +28,3 @@ macos-dist/data/
 
 .DS_Store
 **/.DS_Store
-

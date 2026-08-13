@@ -602,7 +602,9 @@ jobs:
             haxe compile-linux.hxml
             cd native
             cp "$HOME/deps/hashlink/src/hlc_main.c" .
-            gcc -o marblegame -O2 \
+            # The generated single-translation-unit HashLink C currently renders a
+            # black screen when optimized by GCC, so keep the known-good codegen.
+            gcc -o marblegame -O0 -DNDEBUG \
               -I . \
               -L /usr/local/lib \
               marblegame.c \
@@ -615,97 +617,19 @@ jobs:
           name: Package portable bundle
           command: |
             DIST=$HOME/MBHaxe-Gold-Linux
-            mkdir -p "$DIST"
+            MBG_BINARY=$HOME/MBHaxe/native/marblegame \
+              MBG_LIBRARY_DIR=/usr/local/lib \
+              MBG_DIST_DIR="$DIST" \
+              $HOME/MBHaxe/build-portable.sh
 
-            # Native binary
-            cp $HOME/MBHaxe/native/marblegame "$DIST/"
-
-            # HashLink plugins
-            cp /usr/local/lib/{fmt,openal,sdl,ssl,ui,uv,datachannel}.hdll "$DIST/"
-
-            # libhl — copy versioned file and create soname symlink
-            LIBHL_REAL="$(realpath /usr/local/lib/libhl.so)"
-            LIBHL_BASE="$(basename "$LIBHL_REAL")"
-            cp "$LIBHL_REAL" "$DIST/$LIBHL_BASE"
-            LIBHL_SONAME="$(readelf -d "$LIBHL_REAL" | grep -oP '(?<=\[)libhl\.so[^\]]+(?=\])' || true)"
-            
-            if [ -n "$LIBHL_SONAME" ] && [ "$LIBHL_SONAME" != "$LIBHL_BASE" ]; then
-              ln -sf "$LIBHL_BASE" "$DIST/$LIBHL_SONAME"
-            fi
-            
-            ln -sf "${LIBHL_SONAME:-$LIBHL_BASE}" "$DIST/libhl.so"
-            ln -sf "${LIBHL_SONAME:-$LIBHL_BASE}" "$DIST/libhl.so.1"
-
-            # Bundle Steam Runtime system libs for portability
-            get_lib() {
-              ldconfig -p | grep "^\s*$1\b" | awk '{print $NF}' | head -n 1
-            }
-            
-            for soname in libSDL2-2.0.so.0 libopenal.so.1 libuv.so.1 libturbojpeg.so.0; do
-              path="$(get_lib "$soname" || true)"
-              if [ -n "$path" ]; then
-                cp -L "$path" "$DIST/$soname"
-              else
-                echo "Warning: $soname not found"
-              fi
-            done
-            
-            # mbedtls soname varies by version
-            for libbase in libmbedtls libmbedx509 libmbedcrypto; do
-              path="$(ldconfig -p | grep "^\s*${libbase}\.so\." | awk '{print $NF}' | head -n 1 || true)"
-              if [ -n "$path" ]; then
-                cp -L "$path" "$DIST/$(basename "$path")"
-              else
-                echo "Warning: $libbase not found"
-              fi
-            done
-
-            # Game data
-            cp -a $HOME/MBHaxe/data "$DIST/"
-            
-            echo '#!/usr/bin/env bash' > "$DIST/run-mbu.sh"
-            echo 'set -e' >> "$DIST/run-mbu.sh"
-            echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> "$DIST/run-mbu.sh"
-            echo 'export LD_LIBRARY_PATH="$DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$DIST/run-mbu.sh"
-            echo 'cd "$DIR"' >> "$DIST/run-mbu.sh"
-            echo 'exec "$DIR/marblegame" "$@"' >> "$DIST/run-mbu.sh"
-            
-            chmod +x "$DIST/run-mbu.sh"
-
-            echo '#!/usr/bin/env bash' > "$DIST/run-mbu-steam-deck.sh"
-            echo 'set -e' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'export LD_LIBRARY_PATH="$DIR${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'export ALSOFT_DRIVERS="pulse,alsa"' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'export SDL_AUDIODRIVER="pulse"' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'cd "$DIR"' >> "$DIST/run-mbu-steam-deck.sh"
-            echo 'exec "$DIR/marblegame" "$@"' >> "$DIST/run-mbu-steam-deck.sh"
-            
-            chmod +x "$DIST/run-mbu-steam-deck.sh"
-
-            # Set rpath=$ORIGIN so the bundle is self-contained
-            patchelf --set-rpath '$ORIGIN' "$DIST/marblegame"
-            
-            for f in "$DIST"/*.hdll "$DIST"/*.so "$DIST"/*.so.*; do
-              [ -f "$f" ] || continue
-              if file "$f" | grep -q ELF; then
-                patchelf --set-rpath '$ORIGIN' "$f" || true
-              fi
-            done
-            
-            echo "Checking linked libraries..."
-            cd "$DIST"
-            LD_LIBRARY_PATH="$DIST" ldd ./marblegame | tee ldd.txt
-            
-            if grep -q "not found" ldd.txt; then
-              echo "ERROR: missing libraries:"
-              grep "not found" ldd.txt
-              exit 1
-            fi
-            
-            rm -f libhl.so libhl.so.1
-            ln -sf libhl.so.1.13.0 libhl.so.1
-            ln -sf libhl.so.1 libhl.so
+            curl -fsSL --retry 3 --retry-delay 5 \
+              https://github.com/AppImage/appimagetool/releases/download/1.9.1/appimagetool-x86_64.AppImage \
+              -o $HOME/appimagetool-x86_64.AppImage
+            chmod +x $HOME/appimagetool-x86_64.AppImage
+            APPIMAGETOOL=$HOME/appimagetool-x86_64.AppImage \
+              MBG_PORTABLE_DIR="$DIST" \
+              MBG_APPIMAGE_OUTPUT=$HOME/MBG-Controller-Roller-x86_64.AppImage \
+              $HOME/MBHaxe/build-appimage.sh
 
             cd $HOME
             tar -czvf MBHaxe-Gold-Linux.tar.gz MBHaxe-Gold-Linux
@@ -716,6 +640,9 @@ jobs:
             scp -o StrictHostKeyChecking=no -i $KEYPATH -P $PORT \
               $HOME/MBHaxe-Gold-Linux.tar.gz \
               $REMOTEDIR/MBHaxe-Gold-Linux.tar.gz
+            scp -o StrictHostKeyChecking=no -i $KEYPATH -P $PORT \
+              $HOME/MBG-Controller-Roller-x86_64.AppImage \
+              $REMOTEDIR/MBG-Controller-Roller-x86_64.AppImage
 
 
 

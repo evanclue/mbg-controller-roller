@@ -44,13 +44,37 @@ At some point down the line I may add controller type detection and PlayStation 
 
 This fork targets desktop Linux with HashLink and SDL. It requires the MBHaxe Haxe, Heaps, HashLink, and native library toolchain.
 
-The included script generates the C sources, links the native executable, and deploys the finished build:
+The included script generates the C sources, links the native executable, and deploys a self-contained directory containing the executable, game data, HashLink plugins, and their non-system shared-library dependencies:
 
 ```bash
 ./compile-linux.sh
 ```
 
-By default, it expects the toolchain at `/home/cachy/mbhaxe-toolchain` and deploys to `/home/cachy/Desktop/mrbl/gold`. Both locations can be overridden:
+Run the packaged build with `run-mbg.sh`. Keep the extracted directory together; the launcher and executable load the bundled libraries relative to their own location. Linux's C ABI and the host graphics-driver libraries remain supplied by the operating system so GPU driver discovery continues to work.
+
+Release builds also produce `MBG-Controller-Roller-x86_64.AppImage`, a single executable containing that entire portable directory. To create it locally, install `appimagetool` and run:
+
+```bash
+MBG_BUILD_APPIMAGE=1 ./compile-linux.sh
+```
+
+The AppImage keeps settings under `$XDG_CONFIG_HOME/controller-roller` (default: `~/.config/controller-roller`). On first launch, it extracts a versioned writable copy of the packaged game data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`); later launches reuse it.
+
+The packaging stages can also be run independently. `build-portable.sh` takes an already compiled executable and recursively collects its non-system ELF dependencies; `build-appimage.sh` turns that portable directory into a single AppImage:
+
+```bash
+MBG_BINARY=/path/to/marblegame \
+MBG_LIBRARY_DIR=/path/to/hashlink/lib \
+MBG_DIST_DIR="$PWD/dist/MBHaxe-Gold-Linux" \
+./build-portable.sh
+
+APPIMAGETOOL=/path/to/appimagetool \
+MBG_PORTABLE_DIR="$PWD/dist/MBHaxe-Gold-Linux" \
+MBG_APPIMAGE_OUTPUT="$PWD/dist/MBG-Controller-Roller-x86_64.AppImage" \
+./build-appimage.sh
+```
+
+By default, it expects the toolchain at `/home/cachy/mbhaxe-toolchain` and packages to `dist/MBHaxe-Gold-Linux`. Both locations can be overridden:
 
 ```bash
 MBHAXE_TOOLCHAIN=/path/to/toolchain \
