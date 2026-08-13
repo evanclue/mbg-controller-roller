@@ -1,117 +1,81 @@
-# MBHaxe
-A Haxe port of Marble Blast Gold, Ultra and Platinum, name subject to change.
-The marble physics code was taken from [OpenMBU](https://github.com/MBU-Team/OpenMBU) along with my own collision detection code, game logic was partially from scratch and taken with permission from [Marble Blast Web Port](https://github.com/Vanilagy/MarbleBlast).  
+# Marble Blast Gold: Controller Roller
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H2H5FRTTL)  
-Support Discord: https://discord.gg/GsmTVQQAhG
-# Play
-## Web Browser
-The browser port supports touch controls, meaning it can be played on mobile devices.
-### Marble Blast Gold: [Play](https://marbleblastgold.randomityguy.me/)
-### Marble Blast Platinum: [Play](https://marbleblast.randomityguy.me/)
-### Marble Blast Ultra: [Play](https://marbleblastultra.randomityguy.me/)
-## Windows and Mac
-### Marble Blast Gold: [Download](https://github.com/RandomityGuy/MBHaxe/releases/tag/1.1.12)
-### Marble Blast Platinum: [Download](https://github.com/RandomityGuy/MBHaxe/releases/tag/1.7.1)
-### Marble Blast Ultra: [Download](https://github.com/RandomityGuy/MBHaxe/releases/tag/1.2.5-mbu)
-## Mac Instructions - Important
-Put the .app file in either /Applications or ~/Applications in order to run it properly.  
-You will also have to bypass Gatekeeper since the .app is not signed.
-## Android
-### Marble Blast Gold: [Download](https://github.com/RandomityGuy/MBHaxe/releases/download/1.1.12/MBHaxe-Gold.apk)
-### Marble Blast Platinum: [Download](https://github.com/RandomityGuy/MBHaxe/releases/download/1.7.1/MBHaxe-Platinum.apk)
-### Marble Blast Ultra: [Download](https://github.com/RandomityGuy/MBHaxe/releases/download/1.2.5-mbu/MBHaxe-Ultra.apk)
+Marble Blast Gold with full controller support.
 
-## Xbox (NEW!)
-### Marble Blast Ultra: [Download](https://github.com/RandomityGuy/MBHaxe/releases/download/1.2.5-mbu/MBHaxe-Ultra-UWP-Xbox.msix)
-Ported to Xbox via UWP by [Daniel Worley](https://github.com/worleydl).  
-You will need to enable Developer Mode on your Xbox in order to sideload the app. The walkthrough can be found at https://www.youtube.com/watch?v=2Ly9TIdu9uw.  
+Controller Roller is an opinionated desktop Linux fork of [MBHaxe](https://github.com/RandomityGuy/MBHaxe), designed for playing Marble Blast Gold from a couch and TV, a handheld, or a controller-first desktop setup. Every menu and gameplay action is accessible without needing a keyboard or mouse.
 
-## Additional Features
-- Cross Platform Multiplayer: Available in Ultra and Platinum. You can host and join multiplayer matches in any of these platforms: Windows, Mac, Web, Android.
-- Replay System: You can record your run using the built in replay system and watch it later.  
-- Rewind: You can rewind your marble by enabling rewind in the Options and holding down the rewind key (defaults to R). 
-- Controller Support: Full controller support is added to Marble Blast Ultra, with incomplete support for the rest.
-- Touch Controls: Available in the web (mobile) and android versions.
+![Main menu with controller cursor](docs/screenshots/main-menu.png)
 
-# Screenshots
-<img src="https://imgur.com/Ncb4atl.png" width="640">
-<img src="https://imgur.com/KQKUk0Y.png" width="640">
-<img src="https://imgur.com/VnnrIt2.png" width="640">
-<img src="https://imgur.com/lfLBKqO.png" width="640">
-<img src="https://imgur.com/DN1A2Mf.png" width="640">
-<img src="https://imgur.com/2UngOAy.png" width="640">
-<img src="https://imgur.com/Jvfip72.png" width="640">
-<img src="https://imgur.com/CS693zi.png" width="640">
-<img src="https://imgur.com/iryo0AL.png" width="640">
-<img src="https://imgur.com/vsuNqUi.png" width="640">
-<img src="https://imgur.com/SFPdC7g.png" width="640">
-<img src="https://imgur.com/CTFkYAj.png" width="640">
-<img src="https://imgur.com/57dAAP8.png" width="640">
-<img src="https://imgur.com/T5ayduK.png" width="640">
-<img src="https://imgur.com/I3Gaze9.png" width="640">
-<img src="https://imgur.com/qn9aThu.png" width="640">
-<img src="https://imgur.com/eEfU2we.png" width="640">
-<img src="https://imgur.com/7OSISYJ.png" width="640">
+## Features
 
-# Why Haxe?
-I chose Haxe because its a good language that can target other languages, meaning any Haxe code can be converted and used in Python, C++, Java very easily so that nobody has to take effort in porting the code to different languages, atleast thats what my mindset was when I started it, but unfortunately because of the 3d engine I used, it only compiles to C and Javascript. You will have to isolate the engine specific features yourself if you want to use this for other programming languages.
+- Full controller navigation across the menus, dialogs, level selector, options, gameplay, and high score screens
+- Xbox-based button prompts that replace keyboard instructions when a controller is active
+- A pointer-finger cursor designed to fit the original game's art style
+- Fractional GUI scaling based on monitor resolution, affecting UI and HUD
+- A redesigned controller-only options menu with camera sensitivity, Y-axis inversion, anti-aliasing, display, audio, field-of-view, and rewind controls
+- Borderless fullscreen, windowed play, controller-adjustable sliders, and gamepad-friendly rewind controls
+- Improved texture filtering that reduces distant level shimmer while retaining detail
+- Sequential level play from the end-game screen without needing to return to the level select menu each time
+- Continuous level browsing across Beginner, Intermediate, and Advanced categories, stopping only at the end of the game
+- Level names moved below the preview image for improved readability
 
-# Build
-The `master` branch is currently for Marble Blast Platinum. 
-If you want to build Marble Blast Ultra, go to the [mbu-port](https://github.com/RandomityGuy/MBHaxe/tree/mbu-port) branch.    
-If you want to build Marble Blast Gold, go to the [mbg](https://github.com/RandomityGuy/MBHaxe/tree/mbg) branch.  
+![Level selector](docs/screenshots/level-select.png)
 
-Requires Haxe 4.3.0 or above
-You require the following Haxe libraries: 
-- heaps: The specific version located [here](https://github.com/RandomityGuy/heaps)
-- hlsdl (Obtain the haxelib version of hlsdl, then patch it with these files [here](https://github.com/RandomityGuy/hashlink/tree/master/libs/sdl)) (Hashlink/C native target)
-- datachannel: obtained from [here](https://github.com/RandomityGuy/hxDatachannel)
-- stb_ogg_sound (JS/Browser target)
-- zip 1.1.0 (JS/Browser target)
+The level selector can move continuously through every level in the game, instead of abruptly stopping at the end of a difficulty set. Completing a level also offers the next level directly, making a full playthrough feel like one uninterrupted sequence.
 
-## Hashlink/Native
-The version of hashlink to be compiled is located [here](https://github.com/RandomityGuy/hashlink).  
-After all that has been setup, compile to hashlink by doing `haxe compile.hxml` and then running the game by `hl marblegame.hl`.  
-To compile to C, do `haxe compile-c.hxml` and use the instructions in https://gist.github.com/Yanrishatum/d69ed72e368e35b18cbfca726d81279a
+## Controller-first options
 
-## Javascript/Browser
-If the build dependencies are fullfilled, compile with `haxe compile-js.hxml` and run the game by running a web server in the same directory as the repo where index.html is located.
+![Graphics options](docs/screenshots/graphics-options.png)
 
-## MacOS
-See [here](README-macOS.md)
+The options interface has been simplified around the settings relevant to controller play. All navigation paths are explicit, instead of relying on approximate spatial selection.
 
-## Android
-The branches used for Android builds are `mbg-android`, `mbp-android-new` or `mbu-android`.  
-Clone [this repository](https://github.com/RandomityGuy/MBHaxeAndroidLibs) containing the necessary libraries for the build and merge its src folder with that of Export/android/app/src folder.  
-Android NDK version 18.1.5063045 and platform SDK version 31 is needed.  
-Install zyheaps haxelib as well.  
-Finally run `gradlew` in Export/android folder and run `gradlew assembleRelease`  
-This will build the apk file at Export/android/app/build/outputs/apk/release/app-release-unsigned.apk which you can sign yourself and install on your device.  
+![Controller options](docs/screenshots/controller-options.png)
 
-# FAQ
+Camera sensitivity supports fine adjustment across a wide range, including very slow movement at the low end. Y-axis inversion is available directly beside it.
 
-## Help I am able to reproduce a crash!
-If you are on browser, please send the browser console log to me
-If you are on native, please run marbleblast-debug.bat and reproduce the crash, send the resulting stacktrace that occurs during the crash to me.
+## In-game prompts
 
-## How accurate are the marble physics?
-Very accurate with up to 1% deviation from the original physics. The deviations are due to traplaunches being slightly different and occassional internal edge collisions, and the lower delta t values for physics simulations.
+![Xbox controller prompt shown during gameplay](docs/screenshots/controller-prompts.png)
 
-## How do I change my resolution?
-In browser, you can just resize your window. You can use the browser zoom feature (ctrl + scroll) to change the UI size.  
-In native version, you can just resize the window if windowed or use the resolution options in the menu or just directly modify settings.json  
+Help messages automatically use Xbox-style controller labels, such as A, B, X, Y, shoulder buttons, and triggers, instead of displaying keyboard bindings.
+At some point down the line I may add controller type detection and PlayStation prompt support.
 
-## How do I change my FOV?
-Edit settings.json for native version, edit the MBHaxeSettings key in LocalStorage in browser.  
-In the Platinum and Ultra versions, there is an FOV slider.
+## Building on Linux
 
-## How do I unlock/lock FPS?
-You cannot unlock fps in the browser, it is forever set to vsync.
-In the native version, use the options menu to unlock/lock fps, or edit settings.json and set "vsync" to false to unlock fps.
+This fork targets desktop Linux with HashLink and SDL. It requires the MBHaxe Haxe, Heaps, HashLink, and native library toolchain.
 
-## Hey can you please add this new feature?
-If this new feature of yours already exists in MBG but not in this port, then I will try to add it, if I get time to do so, otherwise chances are, I won't add it since I have other things to do and would rather not waste my time on this any further. You are free to do pull requests if you have already implemented said feature.
+The included script generates the C sources, links the native executable, and deploys the finished build:
 
-# Notes
-This project is tested with BrowserStack.
+```bash
+./compile-linux.sh
+```
+
+By default, it expects the toolchain at `/home/cachy/mbhaxe-toolchain` and deploys to `/home/cachy/Desktop/mrbl/gold`. Both locations can be overridden:
+
+```bash
+MBHAXE_TOOLCHAIN=/path/to/toolchain \
+MBG_DEPLOY_DIR=/path/to/game \
+./compile-linux.sh
+```
+
+The underlying dependencies are:
+
+- Haxe 4.3 or newer
+- [RandomityGuy's Heaps fork](https://github.com/RandomityGuy/heaps)
+- [RandomityGuy's HashLink fork and SDL bindings](https://github.com/RandomityGuy/hashlink)
+- [hxDatachannel](https://github.com/RandomityGuy/hxDatachannel)
+- SDL2 and libuv development libraries
+
+I have not tested Windows, Mac, Android, or WebGL building, but they should function?? ymmv
+
+## Project background
+
+Controller Roller is forked from MBHaxe and remains built on its Haxe port of Marble Blast Gold. MBHaxe incorporates marble physics work from [OpenMBU](https://github.com/MBU-Team/OpenMBU), along with game logic developed independently and adapted with permission from the [Marble Blast web port](https://github.com/Vanilagy/MarbleBlast).
+
+This personal fork was developed with some AI assistance, but with extensive care and attention put towards QA. don't like, don't use!
+
+## Reporting issues
+
+If you find an issue that's specific to this fork (i.e. something related to controller support), please [open an issue](https://github.com/evanclue/mbg-fcs/issues) with a short description, reproduction steps, and a screenshot or log when useful.
+
+Feel free to open a PR if you wanna contribute :3
