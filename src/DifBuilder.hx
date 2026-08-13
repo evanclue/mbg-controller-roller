@@ -222,10 +222,10 @@ class DifBuilder {
 		var worker = new ResourceLoaderWorker(() -> {
 			var diffuseTex = ResourceLoader.getTexture('data/interiors_mbu/${baseTexture}').resource;
 			diffuseTex.wrap = Repeat;
-			diffuseTex.mipMap = Nearest;
+			diffuseTex.mipMap = None; // full res at distance instead of mip blur
 			var normalTex = ResourceLoader.getTexture('data/shaders/tex/${normalTexture}').resource;
 			normalTex.wrap = Repeat;
-			normalTex.mipMap = Nearest;
+			normalTex.mipMap = None; // full res at distance instead of mip blur
 			var shader = new PhongMaterial(diffuseTex, normalTex, shininess, specularColor, MarbleGame.instance.world.ambient,
 				MarbleGame.instance.world.dirLight, MarbleGame.instance.world.dirLightDir, uvScaleFactor);
 			if (uvScaleFactor == 0.5)
@@ -242,13 +242,13 @@ class DifBuilder {
 		var worker = new ResourceLoaderWorker(() -> {
 			var diffuseTex = ResourceLoader.getTexture('data/interiors_mbu/${baseTexture}').resource;
 			diffuseTex.wrap = Repeat;
-			diffuseTex.mipMap = Nearest;
+			diffuseTex.mipMap = None; // full res at distance instead of mip blur
 			var normalTex = ResourceLoader.getTexture('data/shaders/tex/tile_mbu.normal.png').resource;
 			normalTex.wrap = Repeat;
-			normalTex.mipMap = Nearest;
+			normalTex.mipMap = None; // full res at distance instead of mip blur
 			var noiseTex = ResourceLoader.getTexture('data/shaders/tex/noise${noiseSuffix}.jpg').resource;
 			noiseTex.wrap = Repeat;
-			noiseTex.mipMap = Nearest;
+			noiseTex.mipMap = None; // full res at distance instead of mip blur
 			var shader = new NoiseTileMaterial(diffuseTex, normalTex, noiseTex, shininess, specular, MarbleGame.instance.world.ambient,
 				MarbleGame.instance.world.dirLight, MarbleGame.instance.world.dirLightDir, uvScale);
 			onFinish(shader);
@@ -894,7 +894,7 @@ class DifBuilder {
 						if (canFindTex(grp)) {
 							texture = ResourceLoader.getTextureRealpath(tex(grp)).resource; // ResourceLoader.getTexture(tex(grp), false).resource;
 							texture.wrap = Wrap.Repeat;
-							texture.mipMap = Nearest;
+							texture.mipMap = None; // full res at distance instead of mip blur
 							var exactName = StringTools.replace(texture.name, "data/", "").toLowerCase();
 							exactName = exactName.substring(0, exactName.lastIndexOf('.'));
 							material = h3d.mat.Material.create(texture);
