@@ -604,7 +604,7 @@ jobs:
             cp "$HOME/deps/hashlink/src/hlc_main.c" .
             # The generated single-translation-unit HashLink C currently renders a
             # black screen when optimized by GCC, so keep the known-good codegen.
-            gcc -o marblegame -O0 -DNDEBUG \
+            gcc -o marblegame -O0 -DNDEBUG -march=x86-64 -mtune=generic \
               -I . \
               -L /usr/local/lib \
               marblegame.c \

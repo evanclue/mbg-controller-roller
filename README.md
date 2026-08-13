@@ -58,6 +58,8 @@ Release builds also produce `MBG-Controller-Roller-x86_64.AppImage`, a single ex
 MBG_BUILD_APPIMAGE=1 ./compile-linux.sh
 ```
 
+This one-command local route requires a baseline x86-64 build environment. Architecture-optimized distributions such as CachyOS should use the Steam Linux Runtime release environment/CI described below.
+
 The AppImage keeps settings under `$XDG_CONFIG_HOME/controller-roller` (default: `~/.config/controller-roller`). On first launch, it extracts a versioned writable copy of the packaged game data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`); later launches reuse it.
 
 The packaging stages can also be run independently. `build-portable.sh` takes an already compiled executable and recursively collects its non-system ELF dependencies; `build-appimage.sh` turns that portable directory into a single AppImage:
@@ -73,6 +75,8 @@ MBG_PORTABLE_DIR="$PWD/dist/MBHaxe-Gold-Linux" \
 MBG_APPIMAGE_OUTPUT="$PWD/dist/MBG-Controller-Roller-x86_64.AppImage" \
 ./build-appimage.sh
 ```
+
+`build-portable.sh` rejects executables or libraries whose ELF metadata requires x86-64-v2, v3, or v4. This prevents a build made on an architecture-optimized distribution from crashing with `SIGILL` on an older computer. Official release artifacts are built in the Steam Linux Runtime container used by CI; use that environment for broadly compatible releases. A local CachyOS build is suitable for testing on the build computer but may intentionally fail this portability check because its system startup objects require x86-64-v3.
 
 By default, it expects the toolchain at `/home/cachy/mbhaxe-toolchain` and packages to `dist/MBHaxe-Gold-Linux`. Both locations can be overridden:
 

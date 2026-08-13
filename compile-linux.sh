@@ -21,7 +21,7 @@ echo "Generating Linux C sources..."
 "$haxe_dir/haxe" compile-linux.hxml
 
 echo "Linking marblegame..."
-gcc -o marblegame -O0 -DNDEBUG \
+gcc -o marblegame -O0 -DNDEBUG -march=x86-64 -mtune=generic \
 	-I native \
 	-I "$prefix_dir/include" \
 	-I "$hashlink_src" \

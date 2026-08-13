@@ -7,10 +7,12 @@ portable_dir=${MBG_PORTABLE_DIR:-$project_dir/dist/MBHaxe-Gold-Linux}
 output=${MBG_APPIMAGE_OUTPUT:-$project_dir/dist/MBG-Controller-Roller-x86_64.AppImage}
 appimagetool=${APPIMAGETOOL:-appimagetool}
 
-command -v sha256sum >/dev/null || {
-	echo "ERROR: sha256sum is required to version the writable data cache" >&2
-	exit 1
-}
+for command in sha256sum readelf file; do
+	command -v "$command" >/dev/null || {
+		echo "ERROR: $command is required to create an AppImage" >&2
+		exit 1
+	}
+done
 
 [[ -x "$portable_dir/marblegame" ]] || {
 	echo "ERROR: portable Linux bundle not found: $portable_dir" >&2
@@ -20,6 +22,15 @@ command -v sha256sum >/dev/null || {
 	echo "ERROR: portable bundle is incomplete: ui.hdll is missing" >&2
 	exit 1
 }
+
+while IFS= read -r elf; do
+	properties=$(readelf -n "$elf" 2>/dev/null || true)
+	if grep -Eq 'x86 ISA needed:.*x86-64-v[234]' <<<"$properties"; then
+		echo "ERROR: cannot create a portable AppImage: $(basename "$elf") requires newer-than-baseline x86-64 instructions" >&2
+		grep 'x86 ISA needed:' <<<"$properties" >&2
+		exit 1
+	fi
+done < <(find "$portable_dir" -maxdepth 1 -type f -print0 | xargs -0 file | awk -F: '/ELF/ { print $1 }')
 
 if [[ "$appimagetool" == */* ]]; then
 	[[ -x "$appimagetool" ]] || {

@@ -41,6 +41,17 @@ needed_libraries() {
 	readelf -d "$1" 2>/dev/null | sed -n 's/.*Shared library: \[\([^]]*\)\].*/\1/p'
 }
 
+require_baseline_x86_64() {
+	local object=$1 properties
+	properties=$(readelf -n "$object" 2>/dev/null || true)
+	if grep -Eq 'x86 ISA needed:.*x86-64-v[234]' <<<"$properties"; then
+		echo "ERROR: $(basename "$object") requires newer-than-baseline x86-64 instructions:" >&2
+		grep 'x86 ISA needed:' <<<"$properties" >&2
+		echo "Build releases in the Steam Linux Runtime container/CI, not on an x86-64-v3 host distribution." >&2
+		exit 1
+	fi
+}
+
 resolve_library() {
 	local object=$1 soname=$2 resolved
 
@@ -96,6 +107,13 @@ while ((${#queue[@]})); do
 		queue+=("$target")
 	done < <(needed_libraries "$object")
 done
+
+# GNU_PROPERTY_X86_ISA_1_NEEDED is the CPU floor, unlike ISA_1_USED, which can
+# describe safe runtime-dispatched implementations. Reject v2+ requirements so
+# a release made on an optimized distro cannot SIGILL on an older x86-64 CPU.
+while IFS= read -r elf; do
+	require_baseline_x86_64 "$elf"
+done < <(find "$dist_dir" -maxdepth 1 -type f -print0 | xargs -0 file | awk -F: '/ELF/ { print $1 }')
 
 while IFS= read -r elf; do
 	patchelf --set-rpath '$ORIGIN' "$elf"
