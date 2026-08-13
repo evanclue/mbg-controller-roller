@@ -57,8 +57,9 @@ class GuiSlider extends GuiImage {
 		} else if (slidingSound != null)
 			slidingSound.pause = true;
 		var off = getOffsetFromParent();
-		this.bmp.x = off.x + renderRect.extent.x * sliderValue;
-		this.bmp.x = Util.clamp(this.bmp.x, off.x, off.x + renderRect.extent.x - bmp.width / 2);
+		// Use the knob's real travel for the normalized range. Clamping the old full-
+		// extent calculation made the knob look stuck while the last values changed.
+		this.bmp.x = off.x + (renderRect.extent.x - bmp.width / 2) * sliderValue;
 		this.bmp.width = this.bmp.tile.width * Settings.uiScale;
 		super.update(dt, mouseState);
 	}

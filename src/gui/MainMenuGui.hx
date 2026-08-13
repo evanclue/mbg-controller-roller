@@ -8,7 +8,7 @@ import src.ResourceLoader;
 import src.Settings;
 
 class MainMenuGui extends GuiImage {
-	public function new() {
+	public function new(?returnFocus:String) {
 		var img = ResourceLoader.getImage("data/ui/background.jpg");
 		super(img.resource.toTile());
 		var domcasual32fontdata = ResourceLoader.getFileEntry("data/font/DomCasualD.fnt");
@@ -86,6 +86,14 @@ class MainMenuGui extends GuiImage {
 			#end
 		};
 		homebase.addChild(exitButton);
+
+		// Preserve the user's place when a submenu returns here. Fresh visits still use
+		// the normal first target (Play).
+		this.controllerDefaultFocus = switch (returnFocus) {
+			case "Help": helpButton;
+			case "Options": optionsButton;
+			default: playButton;
+		};
 
 		#if js
 		var mbp = new GuiButton(loadStaticButtonImages("data/ui/icon_mbp"));

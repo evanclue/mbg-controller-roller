@@ -59,22 +59,25 @@ class HelpCreditsGui extends GuiImage {
 		var nextButton = new GuiButton(loadButtonImages("data/ui/play/next"));
 		nextButton.position = new Vector(482, 376);
 		nextButton.extent = new Vector(75, 60);
+		nextButton.controllerTipOffset = new Vector(55, 41);
 		nextButton.pressedAction = (sender) -> nextPage();
 		helpGui.addChild(nextButton);
 
 		var prevButton = new GuiButton(loadButtonImages("data/ui/play/prev"));
 		prevButton.position = new Vector(58, 383);
 		prevButton.extent = new Vector(77, 58);
+		prevButton.controllerTipOffset = new Vector(54, 39);
 		prevButton.pressedAction = (sender) -> previousPage();
 		helpGui.addChild(prevButton);
 
 		var homeButton = new GuiButton(loadButtonImages("data/ui/play/back"));
 		homeButton.position = new Vector(278, 378);
 		homeButton.extent = new Vector(79, 61);
+		homeButton.controllerTipOffset = new Vector(60, 40);
 		homeButton.accelerator = hxd.Key.ESCAPE;
 		homeButton.gamepadAccelerator = ["B"];
 		homeButton.pressedAction = (sender) -> {
-			MarbleGame.canvas.setContent(new MainMenuGui(), () -> new MainMenuGui());
+			MarbleGame.canvas.setContent(new MainMenuGui("Help"), () -> new MainMenuGui("Help"));
 		}
 		helpGui.addChild(homeButton);
 

@@ -34,6 +34,7 @@ class OptionsDlg extends GuiImage {
 		var domcasual32b = new BitmapFont(domcasual32fontdata.entry);
 		@:privateAccess domcasual32b.loader = ResourceLoader.loader;
 		var domcasual32 = domcasual32b.toSdfFont(cast 26 * Settings.uiScale, MultiChannel);
+		var domcasual24 = domcasual32b.toSdfFont(cast 20 * Settings.uiScale, MultiChannel);
 
 		function loadButtonImages(path:String) {
 			var normal = ResourceLoader.getResource('${path}_n.png', ResourceLoader.getImage, this.imageResources).toTile();
@@ -97,9 +98,11 @@ class OptionsDlg extends GuiImage {
 		var mainMenuButton = new GuiButton(loadButtonImages("data/ui/options/mainm"));
 		mainMenuButton.position = new Vector(330, 356);
 		mainMenuButton.extent = new Vector(121, 53);
+		mainMenuButton.controllerTipOffset = new Vector(96, 35);
+		mainMenuButton.gamepadAccelerator = ["B"];
 		mainMenuButton.pressedAction = (sender) -> {
 			applyFunc();
-			MarbleGame.canvas.setContent(new MainMenuGui(), () -> new MainMenuGui());
+			MarbleGame.canvas.setContent(new MainMenuGui("Options"), () -> new MainMenuGui("Options"));
 		}
 		mainPane.addChild(mainMenuButton);
 
@@ -116,6 +119,7 @@ class OptionsDlg extends GuiImage {
 		var gfxWindow = new GuiButton(loadButtonImages("data/ui/options/grafwindo"));
 		gfxWindow.position = new Vector(174, 4);
 		gfxWindow.extent = new Vector(97, 55);
+		gfxWindow.controllerTipOffset = new Vector(82, 37);
 		gfxWindow.buttonType = Toggle;
 		gfxWindow.pressedAction = (sender) -> {
 			updateWindowFunc(gfxWindow);
@@ -131,6 +135,7 @@ class OptionsDlg extends GuiImage {
 		var gfxFull = new GuiButton(loadButtonImages("data/ui/options/grafful"));
 		gfxFull.position = new Vector(288, 6);
 		gfxFull.extent = new Vector(61, 55);
+		gfxFull.controllerTipOffset = new Vector(49, 39);
 		gfxFull.buttonType = Toggle;
 		gfxFull.pressedAction = (sender) -> {
 			updateWindowFunc(gfxFull);
@@ -170,11 +175,15 @@ class OptionsDlg extends GuiImage {
 		var vsyncButton = new GuiButton(loadButtonImages("data/ui/options/graf_chkbx"));
 		vsyncButton.position = new Vector(170, 66);
 		vsyncButton.extent = new Vector(46, 54);
+		vsyncButton.controllerTipOffset = new Vector(33, 43);
 		vsyncButton.buttonType = Toggle;
 		vsyncButton.pressedAction = (sender) -> {
 			// pressed still holds the old state when the action runs, see GuiButton.activate
 			Settings.optionsSettings.vsync = !vsyncButton.pressed;
-			Settings.applySettings();
+			#if hl
+			hxd.Window.getInstance().vsync = Settings.optionsSettings.vsync;
+			#end
+			Settings.save();
 		}
 		graphicsPane.addChild(vsyncButton);
 		if (Settings.optionsSettings.vsync) {
@@ -195,6 +204,7 @@ class OptionsDlg extends GuiImage {
 		var antiAliasButton = new GuiButton(loadButtonImages("data/ui/options/graf_chkbx"));
 		antiAliasButton.position = new Vector(170, 126);
 		antiAliasButton.extent = new Vector(46, 54);
+		antiAliasButton.controllerTipOffset = new Vector(33, 43);
 		antiAliasButton.buttonType = Toggle;
 		antiAliasButton.pressedAction = (sender) -> {
 			Settings.optionsSettings.antiAliasing = !antiAliasButton.pressed;
@@ -221,6 +231,7 @@ class OptionsDlg extends GuiImage {
 		var fovSlider = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources).toTile());
 		fovSlider.position = new Vector(170, 189);
 		fovSlider.extent = new Vector(250, 34);
+		fovSlider.controllerTipOffset = new Vector(248, 30);
 		fovSlider.controllerSteps = 80;
 		fovSlider.sliderValue = (Settings.optionsSettings.fovX - 60) / (140 - 60);
 		fovSlider.pressedAction = (sender) -> {
@@ -332,6 +343,8 @@ class OptionsDlg extends GuiImage {
 		var audMusKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources).toTile());
 		audMusKnob.position = new Vector(137, 37);
 		audMusKnob.extent = new Vector(250, 34);
+		// Supplied point is relative to aud_mus_slide; translate it to this knob control.
+		audMusKnob.controllerTipOffset = new Vector(251, 28);
 		audMusKnob.sliderValue = Settings.optionsSettings.musicVolume;
 		audMusKnob.controllerSteps = 100;
 		audMusKnob.pressedAction = (sender) -> {
@@ -344,6 +357,8 @@ class OptionsDlg extends GuiImage {
 		var audSndKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_snd_knb.png", ResourceLoader.getImage, this.imageResources).toTile());
 		audSndKnob.position = new Vector(137, 95);
 		audSndKnob.extent = new Vector(254, 37);
+		// Supplied point is relative to aud_snd_slide; translate it to this knob control.
+		audSndKnob.controllerTipOffset = new Vector(256, 26);
 		audSndKnob.sliderValue = Settings.optionsSettings.soundVolume;
 		var testingSnd = AudioManager.playSound(ResourceLoader.getResource("data/sound/testing.wav", ResourceLoader.getAudio, this.soundResources), null, true);
 		testingSnd.pause = true;
@@ -400,7 +415,10 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 			Settings.optionsSettings.musicVolume = audMusKnob.sliderValue;
 			Settings.optionsSettings.soundVolume = audSndKnob.sliderValue;
 
-			Settings.applySettings();
+			// Volumes already apply live. Save without reapplying display mode, which
+			// would resize an untouched window merely because Options was opened.
+			AudioManager.updateVolumes();
+			Settings.save();
 		}
 
 		// REWIND PANEL
@@ -462,40 +480,60 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 		rewindPane.position = new Vector(41, 91);
 		rewindPane.extent = new Vector(425, 281);
 
-		var rwndTimescaleSlide = new GuiImage(ResourceLoader.getResource("data/ui/options/rwnd_timescale.png", ResourceLoader.getImage, this.imageResources)
-			.toTile());
-		rwndTimescaleSlide.position = new Vector(29, 44);
-		rwndTimescaleSlide.extent = new Vector(381, 33);
-		rewindPane.addChild(rwndTimescaleSlide);
-
-		var rwndTxt = new GuiImage(ResourceLoader.getResource("data/ui/options/rwnd_txt.png", ResourceLoader.getImage, this.imageResources).toTile());
-		rwndTxt.position = new Vector(32, 83);
-		rwndTxt.extent = new Vector(146, 261);
-		rewindPane.addChild(rwndTxt);
-
-		var rewindTimescaleKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources)
-			.toTile());
-		rewindTimescaleKnob.position = new Vector(144, 44);
-		rewindTimescaleKnob.extent = new Vector(250, 34);
-		rewindTimescaleKnob.sliderValue = (Settings.optionsSettings.rewindTimescale - 0.1) / (1 - 0.1);
-		rewindTimescaleKnob.pressedAction = (sender) -> {
-			Settings.optionsSettings.rewindTimescale = cast(0.1 + rewindTimescaleKnob.sliderValue * (1 - 0.1));
-		}
-		rewindPane.addChild(rewindTimescaleKnob);
-
+		var rewindEnableLabel = new GuiText(domcasual32);
+		rewindEnableLabel.position = new Vector(75, 34);
+		rewindEnableLabel.extent = new Vector(180, 50);
+		rewindEnableLabel.text.textColor = 0x000000;
+		rewindEnableLabel.text.text = "Rewind:";
+		rewindEnableLabel.justify = Right;
+		rewindPane.addChild(rewindEnableLabel);
 
 		var rwndEnableButton = new GuiButton(loadButtonImages("data/ui/options/graf_chkbx"));
-		rwndEnableButton.position = new Vector(112, 72);
-
+		rwndEnableButton.position = new Vector(267, 19);
 		rwndEnableButton.extent = new Vector(46, 54);
+		rwndEnableButton.controllerTipOffset = new Vector(33, 43);
 		rwndEnableButton.buttonType = Toggle;
 		rwndEnableButton.pressedAction = (sender) -> {
 			Settings.optionsSettings.rewindEnabled = !rwndEnableButton.pressed;
+			Settings.save();
 		}
+		rwndEnableButton.pressed = Settings.optionsSettings.rewindEnabled;
 		rewindPane.addChild(rwndEnableButton);
-		if (Settings.optionsSettings.rewindEnabled) {
-			rwndEnableButton.pressed = true;
+
+		var rewindTimescaleLabel = new GuiText(domcasual32);
+		rewindTimescaleLabel.position = new Vector(20, 137);
+		rewindTimescaleLabel.extent = new Vector(160, 50);
+		rewindTimescaleLabel.text.textColor = 0x000000;
+		rewindTimescaleLabel.text.text = "Timescale (" + Math.round(Settings.optionsSettings.rewindTimescale * 100) / 100 + "x):";
+		rewindTimescaleLabel.justify = Right;
+		rewindPane.addChild(rewindTimescaleLabel);
+
+		var rewindTimescaleSlide = new GuiImage(ResourceLoader.getResource("data/ui/options/slider.png", ResourceLoader.getImage, this.imageResources)
+			.toTile());
+		rewindTimescaleSlide.position = new Vector(185, 130);
+		rewindTimescaleSlide.extent = new Vector(212, 34);
+		rewindPane.addChild(rewindTimescaleSlide);
+
+		var rewindTimescaleKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources)
+			.toTile());
+		rewindTimescaleKnob.position = new Vector(185, 130);
+		rewindTimescaleKnob.extent = new Vector(212, 34);
+		rewindTimescaleKnob.controllerTipOffset = new Vector(207, 30);
+		rewindTimescaleKnob.controllerSteps = 90;
+		rewindTimescaleKnob.sliderValue = (Settings.optionsSettings.rewindTimescale - 0.1) / (1 - 0.1);
+		rewindTimescaleKnob.pressedAction = (sender) -> {
+			Settings.optionsSettings.rewindTimescale = cast(0.1 + rewindTimescaleKnob.sliderValue * (1 - 0.1));
+			rewindTimescaleLabel.text.text = "Timescale (" + Math.round(Settings.optionsSettings.rewindTimescale * 100) / 100 + "x):";
 		}
+		rewindPane.addChild(rewindTimescaleKnob);
+
+		var rewindHelp = new GuiText(domcasual24);
+		rewindHelp.position = new Vector(10, 84);
+		rewindHelp.extent = new Vector(405, 50);
+		rewindHelp.text.textColor = 0x000000;
+		rewindHelp.text.text = "When enabled, hold Y to rewind time!";
+		rewindHelp.justify = Center;
+		rewindPane.addChild(rewindHelp);
 
 		// CONTROLS PANEL
 		var controlsPane = new GuiControl();
@@ -506,10 +544,8 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 		transparentbmp.setPixel(0, 0, 0);
 		var transparentTile = Tile.fromBitmap(transparentbmp);
 
-		var domcasual24fontdata = ResourceLoader.getFileEntry("data/font/DomCasualD.fnt");
-		var domcasual24b = new BitmapFont(domcasual24fontdata.entry);
-		@:privateAccess domcasual24b.loader = ResourceLoader.loader;
-		var domcasual24 = domcasual24b.toSdfFont(cast 20 * Settings.uiScale, MultiChannel);
+		var padSensitivityKnob:GuiSlider = null;
+		var invertYButton:GuiButton = null;
 
 		if (Util.isTouchDevice()) {
 			var buttonCameraFactorLabel = new GuiText(domcasual32);
@@ -639,10 +675,11 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 			controlsPane.addChild(touchControlsTxt);
 			controlsPane.addChild(touchControlsEdit);
 		} else {
-			// The keyboard and mouse rebinding panels are gone in this fork, so the only
-			// control worth exposing here is how fast the right stick swings the camera.
+			// The keyboard and mouse rebinding panels are gone in this fork, so this pane
+			// exposes the camera controls that matter for the right stick.
+			Settings.gamepadSettings.cameraSensitivity = Util.clamp(Settings.gamepadSettings.cameraSensitivity, 0.01, 2.0);
 			var padSensitivityLabel = new GuiText(domcasual32);
-			padSensitivityLabel.position = new Vector(0, 120);
+			padSensitivityLabel.position = new Vector(0, 95);
 			padSensitivityLabel.extent = new Vector(459, 50);
 			padSensitivityLabel.text.textColor = 0x000000;
 			padSensitivityLabel.text.text = "Camera Sensitivity: (" + Math.round(Settings.gamepadSettings.cameraSensitivity * 100) / 100 + ")";
@@ -651,47 +688,114 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 
 			var padSensitivitySlider = new GuiImage(ResourceLoader.getResource("data/ui/options/slider.png", ResourceLoader.getImage, this.imageResources)
 				.toTile());
-			padSensitivitySlider.position = new Vector(130, 165);
+			padSensitivitySlider.position = new Vector(130, 140);
 			padSensitivitySlider.extent = new Vector(200, 34);
 			controlsPane.addChild(padSensitivitySlider);
 
-			var padSensitivityKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources)
+			padSensitivityKnob = new GuiSlider(ResourceLoader.getResource("data/ui/options/aud_mus_knb.png", ResourceLoader.getImage, this.imageResources)
 				.toTile());
-			padSensitivityKnob.position = new Vector(130, 165);
+			padSensitivityKnob.position = new Vector(130, 140);
 			padSensitivityKnob.extent = new Vector(196, 34);
-			padSensitivityKnob.controllerSteps = 28;
-			padSensitivityKnob.sliderValue = (Settings.gamepadSettings.cameraSensitivity - 0.2) / (3.0 - 0.2);
+			padSensitivityKnob.controllerTipOffset = new Vector(195, 30);
+			padSensitivityKnob.controllerSteps = 199;
+			padSensitivityKnob.sliderValue = (Settings.gamepadSettings.cameraSensitivity - 0.01) / (2.0 - 0.01);
 			padSensitivityKnob.pressedAction = (sender) -> {
-				Settings.gamepadSettings.cameraSensitivity = 0.2 + (3.0 - 0.2) * padSensitivityKnob.sliderValue;
+				Settings.gamepadSettings.cameraSensitivity = 0.01 + (2.0 - 0.01) * padSensitivityKnob.sliderValue;
 				padSensitivityLabel.text.text = "Camera Sensitivity: (" + Math.round(Settings.gamepadSettings.cameraSensitivity * 100) / 100 + ")";
 			}
 			controlsPane.addChild(padSensitivityKnob);
+
+			var invertYLabel = new GuiText(domcasual32);
+			invertYLabel.position = new Vector(88, 205);
+			invertYLabel.extent = new Vector(190, 50);
+			invertYLabel.text.textColor = 0x000000;
+			invertYLabel.text.text = "Invert Y-Axis:";
+			invertYLabel.justify = Right;
+			controlsPane.addChild(invertYLabel);
+
+			invertYButton = new GuiButton(loadButtonImages("data/ui/options/graf_chkbx"));
+			invertYButton.position = new Vector(290, 190);
+			invertYButton.extent = new Vector(46, 54);
+			invertYButton.controllerTipOffset = new Vector(33, 43);
+			invertYButton.buttonType = Toggle;
+			// Toggle actions run before GuiButton flips its pressed state.
+			invertYButton.pressedAction = (sender) -> {
+				Settings.gamepadSettings.invertYAxis = !invertYButton.pressed;
+				Settings.save();
+			};
+			invertYButton.pressed = Settings.gamepadSettings.invertYAxis;
+			controlsPane.addChild(invertYButton);
 		}
 
 		// INVISIBLE BUTTON SHIT
 		var audioTabBtn = new GuiButton([transparentTile, transparentTile, transparentTile]);
 		audioTabBtn.position = new Vector(213, 39);
 		audioTabBtn.extent = new Vector(92, 42);
+		audioTabBtn.controllerTipOffset = new Vector(85, 35);
 		audioTabBtn.pressedAction = (sender) -> setTab("Audio");
 		mainPane.addChild(audioTabBtn);
 
 		var controlsTabBtn = new GuiButton([transparentTile, transparentTile, transparentTile]);
 		controlsTabBtn.position = new Vector(331, 24);
 		controlsTabBtn.extent = new Vector(117, 42);
+		controlsTabBtn.controllerTipOffset = new Vector(110, 30);
 		controlsTabBtn.pressedAction = (sender) -> setTab("Controls");
 		mainPane.addChild(controlsTabBtn);
 
 		var graphicsTabBtn = new GuiButton([transparentTile, transparentTile, transparentTile]);
 		graphicsTabBtn.position = new Vector(70, 48);
 		graphicsTabBtn.extent = new Vector(117, 48);
+		graphicsTabBtn.controllerTipOffset = new Vector(104, 35);
 		graphicsTabBtn.pressedAction = (sender) -> setTab("Graphics");
 		mainPane.addChild(graphicsTabBtn);
 
 		var rewindTabBtn = new GuiButton([transparentTile, transparentTile, transparentTile]);
 		rewindTabBtn.position = new Vector(480, 76);
 		rewindTabBtn.extent = new Vector(48, 160);
+		rewindTabBtn.controllerTipOffset = new Vector(20, 130);
 		rewindTabBtn.pressedAction = (sender) -> setTab("Rewind");
 		mainPane.addChild(rewindTabBtn);
+
+		// The options artwork is irregular enough that geometric nearest-neighbour
+		// navigation produces surprising jumps. Define the intended rows explicitly.
+		this.controllerDefaultFocus = graphicsTabBtn;
+
+		graphicsTabBtn.controllerNavDown = gfxWindow;
+		gfxWindow.controllerNavUp = graphicsTabBtn;
+		gfxWindow.controllerNavDown = vsyncButton;
+		gfxWindow.controllerNavRight = gfxFull;
+		gfxFull.controllerNavUp = graphicsTabBtn;
+		gfxFull.controllerNavDown = vsyncButton;
+		gfxFull.controllerNavLeft = gfxWindow;
+		gfxFull.controllerNavRight = rewindTabBtn;
+		vsyncButton.controllerNavUp = gfxWindow;
+		vsyncButton.controllerNavDown = antiAliasButton;
+		vsyncButton.controllerNavRight = rewindTabBtn;
+		antiAliasButton.controllerNavUp = vsyncButton;
+		antiAliasButton.controllerNavDown = fovSlider;
+		antiAliasButton.controllerNavRight = rewindTabBtn;
+		fovSlider.controllerNavUp = antiAliasButton;
+		fovSlider.controllerNavDown = mainMenuButton;
+
+		audioTabBtn.controllerNavDown = audMusKnob;
+		audMusKnob.controllerNavUp = audioTabBtn;
+		audMusKnob.controllerNavDown = audSndKnob;
+		audSndKnob.controllerNavUp = audMusKnob;
+		audSndKnob.controllerNavDown = mainMenuButton;
+
+		if (padSensitivityKnob != null && invertYButton != null) {
+			padSensitivityKnob.controllerNavUp = controlsTabBtn;
+			padSensitivityKnob.controllerNavDown = invertYButton;
+			invertYButton.controllerNavUp = padSensitivityKnob;
+			invertYButton.controllerNavDown = mainMenuButton;
+			invertYButton.controllerNavRight = rewindTabBtn;
+		}
+
+		rwndEnableButton.controllerNavUp = controlsTabBtn;
+		rwndEnableButton.controllerNavLeft = graphicsTabBtn;
+		rwndEnableButton.controllerNavDown = rewindTimescaleKnob;
+		rewindTimescaleKnob.controllerNavUp = rwndEnableButton;
+		rewindTimescaleKnob.controllerNavDown = mainMenuButton;
 
 
 		// LB/RB cycle the tab row, the same set setTab understands
@@ -708,6 +812,11 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 
 		setTab = function(tab:String) {
 			currentTab = tab;
+			// These links depend on which pane is present. Targets from hidden panes are
+			// deliberately cleared rather than left for spatial navigation to reinterpret.
+			controlsTabBtn.controllerNavDown = null;
+			rewindTabBtn.controllerNavDown = null;
+			mainMenuButton.controllerNavUp = null;
 			tabs.removeChild(audioTab);
 			tabs.removeChild(controlsTab);
 			tabs.removeChild(rewindTab);
@@ -718,6 +827,8 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 			mainPane.removeChild(controlsPane);
 			mainPane.removeChild(rewindPane);
 			if (tab == "Graphics") {
+				this.controllerDefaultFocus = graphicsTabBtn;
+				mainMenuButton.controllerNavUp = fovSlider;
 				tabs.addChild(audioTab);
 				tabs.addChild(controlsTab);
 				tabs.addChild(rewindTab);
@@ -726,6 +837,9 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 				mainPane.addChild(graphicsPane);
 			}
 			if (tab == "Audio") {
+				this.controllerDefaultFocus = audioTabBtn;
+				controlsTabBtn.controllerNavDown = audMusKnob;
+				mainMenuButton.controllerNavUp = audSndKnob;
 				tabs.addChild(graphicsTab);
 				tabs.addChild(controlsTab);
 				tabs.addChild(rewindTab);
@@ -734,6 +848,11 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 				mainPane.addChild(audioPane);
 			}
 			if (tab == "Controls") {
+				this.controllerDefaultFocus = controlsTabBtn;
+				if (padSensitivityKnob != null && invertYButton != null) {
+					controlsTabBtn.controllerNavDown = padSensitivityKnob;
+					mainMenuButton.controllerNavUp = invertYButton;
+				}
 				tabs.addChild(audioTab);
 				tabs.addChild(graphicsTab);
 				tabs.addChild(rewindTab);
@@ -742,6 +861,10 @@ Extensions: EAX 2.0, EAX 3.0, EAX Unified, and EAX-AC3";
 				mainPane.addChild(controlsPane);
 			}
 			if (tab == "Rewind") {
+				this.controllerDefaultFocus = rewindTabBtn;
+				rewindTabBtn.controllerNavDown = mainMenuButton;
+				rewindTabBtn.controllerNavLeft = rewindTimescaleKnob;
+				mainMenuButton.controllerNavUp = rewindTimescaleKnob;
 				tabs.addChild(audioTab);
 				tabs.addChild(graphicsTab);
 				tabs.addChild(controlsTab);
