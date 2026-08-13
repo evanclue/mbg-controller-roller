@@ -6,6 +6,7 @@ import src.Settings;
 
 class Gamepad {
 	public static var gamepad:Pad = Pad.createDummy();
+	static var gamepads:Array<Pad> = [];
 
 	public static function init() {
 		Pad.wait(onPad);
@@ -16,9 +17,27 @@ class Gamepad {
 		pad.axisDeadZone = Settings.gamepadSettings.axisDeadzone;
 		pad.onDisconnect = function() {
 			Console.log("Gamepad disconnected");
-			gamepad = Pad.createDummy();
+			gamepads.remove(pad);
+			selectPrimaryGamepad();
 		}
-		gamepad = pad;
+		if (gamepads.indexOf(pad) == -1)
+			gamepads.push(pad);
+		selectPrimaryGamepad();
+	}
+
+	/**
+		The game is single-player, so controller input always belongs to the first
+		connected pad. In particular, controller managers such as CardForce expose a
+		stable bank of virtual player slots; selecting the last enumerated pad would
+		leave the game listening to an unused slot instead of player one.
+	**/
+	static function selectPrimaryGamepad() {
+		var primary:Pad = null;
+		for (pad in gamepads) {
+			if (pad.connected && (primary == null || pad.index < primary.index))
+				primary = pad;
+		}
+		gamepad = primary != null ? primary : Pad.createDummy();
 	}
 
 	public static function getId(name:String) {
@@ -70,7 +89,7 @@ class Gamepad {
 	public static function isDown(buttons:Array<String>) {
 		for (button in buttons) {
 			var buttonId = getId(button);
-			if (buttonId < 0 || buttonId > gamepad.buttons.length)
+			if (buttonId < 0 || buttonId >= gamepad.buttons.length)
 				continue;
 			if (gamepad.isDown(buttonId))
 				return true;
@@ -81,7 +100,7 @@ class Gamepad {
 	public static function releaseKey(buttons:Array<String>) {
 		for (button in buttons) {
 			var buttonId = getId(button);
-			if (buttonId < 0 || buttonId > gamepad.buttons.length)
+			if (buttonId < 0 || buttonId >= gamepad.buttons.length)
 				continue;
 			@:privateAccess gamepad.buttons[buttonId] = false;
 		}
@@ -90,7 +109,7 @@ class Gamepad {
 	public static function isPressed(buttons:Array<String>) {
 		for (button in buttons) {
 			var buttonId = getId(button);
-			if (buttonId < 0 || buttonId > gamepad.buttons.length)
+			if (buttonId < 0 || buttonId >= gamepad.buttons.length)
 				continue;
 			if (gamepad.isPressed(buttonId))
 				return true;
@@ -101,7 +120,7 @@ class Gamepad {
 	public static function isReleased(buttons:Array<String>) {
 		for (button in buttons) {
 			var buttonId = getId(button);
-			if (buttonId < 0 || buttonId > gamepad.buttons.length)
+			if (buttonId < 0 || buttonId >= gamepad.buttons.length)
 				continue;
 			if (gamepad.isReleased(buttonId))
 				return true;
