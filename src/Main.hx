@@ -183,8 +183,39 @@ class Main extends hxd.App {
 		#end
 	}
 
+	/**
+		The gl context is created with the engine, before Settings.init has run, so the
+		anti aliasing choice has to be read straight off disk here. Changing it therefore
+		only takes effect on the next launch.
+	**/
+	static function applyAntiAliasingSetting() {
+		#if hl
+		try {
+			var path = haxe.io.Path.join([Settings.settingsDir, "settings.json"]);
+			if (!sys.FileSystem.exists(path))
+				return;
+			var json = haxe.Json.parse(sys.io.File.getContent(path));
+			if (json.options != null && json.options.antiAliasing == true) {
+				h3d.Engine.ANTIALIASING = 4;
+				#if hlsdl
+				// heaps only forwards its antiAlias value to the WebGL context, and never
+				// calls setGLOptions, so on sdl the multisample buffer has to be asked for
+				// directly. SDL_GL_SetAttribute needs the video subsystem up, and is ignored
+				// otherwise, so init first - it is guarded, so heaps' own later call is a no
+				// op and these attributes survive until the window is made.
+				sdl.Sdl.init();
+				sdl.Sdl.setGLOptions(3, 2, 24, 8, 1, 4);
+				#end
+			}
+		} catch (e) {
+			// A missing or malformed settings file just means no anti aliasing
+		}
+		#end
+	}
+
 	static function main() {
 		// h3d.mat.PbrMaterialSetup.set();
+		applyAntiAliasingSetting();
 		new Main();
 	}
 }

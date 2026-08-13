@@ -46,6 +46,7 @@ typedef OptionsSettings = {
 	var marbleShader:String;
 	var rewindEnabled:Bool;
 	var rewindTimescale:Float;
+	var antiAliasing:Bool;
 }
 
 typedef ControlsSettings = {
@@ -143,6 +144,7 @@ class Settings {
 		marbleShader: "Default",
 		rewindEnabled: false,
 		rewindTimescale: 1,
+		antiAliasing: false,
 		fpsLimit: -1,
 		vsync: #if js true #end
 		#if hl
@@ -241,10 +243,22 @@ class Settings {
 	#end
 	public static function applySettings() {
 		#if hl
-		Window.getInstance().resize(optionsSettings.screenWidth, optionsSettings.screenHeight);
-		Window.getInstance().displayMode = optionsSettings.isFullScreen ? FullscreenResize : Windowed;
+		var wnd = Window.getInstance();
+		if (optionsSettings.isFullScreen) {
+			// Borderless takes the whole screen at its native resolution, so no resize
+			wnd.displayMode = Borderless;
+		} else {
+			// A stored size at or above the current screen is left over from a fullscreen
+			// session, so fall back to something that is visibly a window
+			if (optionsSettings.screenWidth >= wnd.width || optionsSettings.screenHeight >= wnd.height) {
+				optionsSettings.screenWidth = 1280;
+				optionsSettings.screenHeight = 720;
+			}
+			wnd.displayMode = Windowed;
+			wnd.resize(optionsSettings.screenWidth, optionsSettings.screenHeight);
+		}
 
-		Window.getInstance().vsync = optionsSettings.vsync;
+		wnd.vsync = optionsSettings.vsync;
 		#end
 		AudioManager.updateVolumes();
 
@@ -476,6 +490,9 @@ class Settings {
 			if (optionsSettings.rewindTimescale == null) {
 				optionsSettings.rewindTimescale = 1;
 			}
+			if (optionsSettings.antiAliasing == null) {
+				optionsSettings.antiAliasing = false;
+			}
 			#end
 			progression = json.progression;
 			highscoreName = json.highscoreName;
@@ -546,8 +563,12 @@ class Settings {
 		if (highscoreName == null || highscoreName == "")
 			highscoreName = defaultPlayerName();
 		#if hl
-		Window.getInstance().resize(optionsSettings.screenWidth, optionsSettings.screenHeight);
-		Window.getInstance().displayMode = optionsSettings.isFullScreen ? FullscreenResize : Windowed;
+		if (optionsSettings.isFullScreen) {
+			Window.getInstance().displayMode = Borderless;
+		} else {
+			Window.getInstance().displayMode = Windowed;
+			Window.getInstance().resize(optionsSettings.screenWidth, optionsSettings.screenHeight);
+		}
 		uiScale = computeUiScale();
 		#end
 		#if js
@@ -571,8 +592,13 @@ class Settings {
 			Settings.zoomRatio = zoomRatio;
 			#end
 			#if hl
-			Settings.optionsSettings.screenWidth = cast wnd.width;
-			Settings.optionsSettings.screenHeight = cast wnd.height;
+			// Only record a genuine windowed size. Storing the fullscreen dimensions here
+			// meant leaving fullscreen resized the window to fill the screen, which looked
+			// like the toggle had done nothing.
+			if (!Settings.optionsSettings.isFullScreen) {
+				Settings.optionsSettings.screenWidth = cast wnd.width;
+				Settings.optionsSettings.screenHeight = cast wnd.height;
+			}
 			var newUiScale = computeUiScale();
 			if (newUiScale != uiScale) {
 				uiScale = newUiScale;
