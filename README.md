@@ -76,7 +76,7 @@ MBG_APPIMAGE_OUTPUT="$PWD/dist/MBG-Controller-Roller-x86_64.AppImage" \
 ./build-appimage.sh
 ```
 
-`build-portable.sh` rejects executables or libraries whose ELF metadata requires x86-64-v2, v3, or v4. This prevents a build made on an architecture-optimized distribution from crashing with `SIGILL` on an older computer. Official release artifacts are built in the Steam Linux Runtime container used by CI; use that environment for broadly compatible releases. A local CachyOS build is suitable for testing on the build computer but may intentionally fail this portability check because its system startup objects require x86-64-v3.
+`build-portable.sh` rejects executables or libraries whose ELF metadata requires x86-64-v2, v3, or v4. This prevents a build made on an architecture-optimized distribution from crashing with `SIGILL` on an older computer. It also detects Steam Runtime's SDL2 compatibility layer and includes its dynamically loaded SDL3 dependency. The release build links the data-channel module's C++ runtime internally while leaving graphics-driver support libraries to the host, avoiding runtime mismatches with the target computer's GPU driver. Official release artifacts are built in the Steam Linux Runtime container used by CI; use that environment for broadly compatible releases. A local CachyOS build is suitable for testing on the build computer but may intentionally fail this portability check because its system startup objects require x86-64-v3.
 
 By default, it expects the toolchain at `/home/cachy/mbhaxe-toolchain` and packages to `dist/MBHaxe-Gold-Linux`. Both locations can be overridden:
 

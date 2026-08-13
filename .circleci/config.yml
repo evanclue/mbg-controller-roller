@@ -564,7 +564,7 @@ jobs:
               -DCMAKE_C_EXTENSIONS=ON \
               -DCMAKE_C_FLAGS="-std=gnu11 -fvisibility=hidden" \
               -DCMAKE_CXX_FLAGS="-fvisibility=hidden" \
-              -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-Bsymbolic -Wl,--exclude-libs,ALL" \
+              -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-Bsymbolic -Wl,--exclude-libs,ALL -static-libstdc++ -static-libgcc" \
               -DUSE_MBEDTLS=OFF \
               -DUSE_GNUTLS=OFF \
               -DHASHLINK_INCLUDE_DIR="$HOME/deps/hashlink/src" \

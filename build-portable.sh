@@ -31,7 +31,7 @@ done
 # graphics loader can prevent the application from finding the user's GPU driver.
 is_host_library() {
 	case "$1" in
-		linux-vdso.so.*|ld-linux*.so.*|libc.so.*|libm.so.*|libmvec.so.*|libdl.so.*|libpthread.so.*|librt.so.*|libresolv.so.*|libnss_*.so.*|libutil.so.*) return 0 ;;
+		linux-vdso.so.*|ld-linux*.so.*|libc.so.*|libm.so.*|libmvec.so.*|libdl.so.*|libpthread.so.*|librt.so.*|libresolv.so.*|libnss_*.so.*|libutil.so.*|libstdc++.so.*|libgcc_s.so.*) return 0 ;;
 		libGL*.so.*|libEGL*.so.*|libGLES*.so.*|libOpenGL*.so.*|libX*.so.*|libxcb*.so.*|libwayland*.so.*|libdrm*.so.*|libgbm.so.*|libvulkan.so.*) return 0 ;;
 		*) return 1 ;;
 	esac
@@ -85,28 +85,46 @@ cp -a "$project_dir/data" "$dist_dir/data"
 declare -a queue=("$dist_dir/marblegame")
 declare -A inspected=()
 
-while ((${#queue[@]})); do
-	object=${queue[0]}
-	queue=("${queue[@]:1}")
-	[[ -z ${inspected[$object]+x} ]] || continue
-	inspected[$object]=1
+bundle_queue() {
+	while ((${#queue[@]})); do
+		object=${queue[0]}
+		queue=("${queue[@]:1}")
+		[[ -z ${inspected[$object]+x} ]] || continue
+		inspected[$object]=1
 
-	while IFS= read -r soname; do
-		[[ -n "$soname" ]] || continue
-		is_host_library "$soname" && continue
+		while IFS= read -r soname; do
+			[[ -n "$soname" ]] || continue
+			is_host_library "$soname" && continue
 
-		target="$dist_dir/$soname"
-		if [[ ! -f "$target" ]]; then
-			source=$(resolve_library "$object" "$soname")
-			[[ -n "$source" && -f "$source" ]] || {
-				echo "ERROR: could not bundle $soname (required by $(basename "$object"))" >&2
-				exit 1
-			}
-			install -m 755 "$source" "$target"
-		fi
-		queue+=("$target")
-	done < <(needed_libraries "$object")
-done
+			target="$dist_dir/$soname"
+			if [[ ! -f "$target" ]]; then
+				source=$(resolve_library "$object" "$soname")
+				[[ -n "$source" && -f "$source" ]] || {
+					echo "ERROR: could not bundle $soname (required by $(basename "$object"))" >&2
+					exit 1
+				}
+				install -m 755 "$source" "$target"
+			fi
+			queue+=("$target")
+		done < <(needed_libraries "$object")
+	done
+}
+
+bundle_queue
+
+# Modern Steam Runtime exposes SDL2 through sdl2-compat. SDL3 is opened with
+# dlopen(), so it is deliberately absent from DT_NEEDED and ldd output. Detect
+# that implementation and bundle its matching SDL3 plus transitive dependencies.
+if [[ -f "$dist_dir/libSDL2-2.0.so.0" ]] && grep -aq 'sdl2-compat' "$dist_dir/libSDL2-2.0.so.0"; then
+	sdl3_source=$(resolve_library "$dist_dir/libSDL2-2.0.so.0" libSDL3.so.0)
+	[[ -n "$sdl3_source" && -f "$sdl3_source" ]] || {
+		echo "ERROR: sdl2-compat requires libSDL3.so.0, but it could not be bundled" >&2
+		exit 1
+	}
+	install -m 755 "$sdl3_source" "$dist_dir/libSDL3.so.0"
+	queue+=("$dist_dir/libSDL3.so.0")
+	bundle_queue
+fi
 
 # GNU_PROPERTY_X86_ISA_1_NEEDED is the CPU floor, unlike ISA_1_USED, which can
 # describe safe runtime-dispatched implementations. Reject v2+ requirements so
