@@ -78,6 +78,17 @@ typedef VertexBucket = {
 }
 
 class DifBuilder {
+	/**
+		Keep interior textures crisp while still filtering the sub-pixel detail that causes
+		sparkling in motion. A small negative LOD bias delays the softer mip levels, while
+		trilinear filtering avoids the hard transitions produced by nearest-mip sampling.
+	**/
+	static inline function configureLevelTexture(texture:Texture) {
+		texture.wrap = Wrap.Repeat;
+		texture.mipMap = Linear;
+		texture.lodBias = -0.75;
+	}
+
 	static var materialDict:Map<String, {
 		friction:Float,
 		restitution:Float,
@@ -221,11 +232,9 @@ class DifBuilder {
 			uvScaleFactor:Float = 1) {
 		var worker = new ResourceLoaderWorker(() -> {
 			var diffuseTex = ResourceLoader.getTexture('data/interiors_mbu/${baseTexture}').resource;
-			diffuseTex.wrap = Repeat;
-			diffuseTex.mipMap = None; // full res at distance instead of mip blur
+			configureLevelTexture(diffuseTex);
 			var normalTex = ResourceLoader.getTexture('data/shaders/tex/${normalTexture}').resource;
-			normalTex.wrap = Repeat;
-			normalTex.mipMap = None; // full res at distance instead of mip blur
+			configureLevelTexture(normalTex);
 			var shader = new PhongMaterial(diffuseTex, normalTex, shininess, specularColor, MarbleGame.instance.world.ambient,
 				MarbleGame.instance.world.dirLight, MarbleGame.instance.world.dirLightDir, uvScaleFactor);
 			if (uvScaleFactor == 0.5)
@@ -241,14 +250,11 @@ class DifBuilder {
 			uvScale:Float = 1) {
 		var worker = new ResourceLoaderWorker(() -> {
 			var diffuseTex = ResourceLoader.getTexture('data/interiors_mbu/${baseTexture}').resource;
-			diffuseTex.wrap = Repeat;
-			diffuseTex.mipMap = None; // full res at distance instead of mip blur
+			configureLevelTexture(diffuseTex);
 			var normalTex = ResourceLoader.getTexture('data/shaders/tex/tile_mbu.normal.png').resource;
-			normalTex.wrap = Repeat;
-			normalTex.mipMap = None; // full res at distance instead of mip blur
+			configureLevelTexture(normalTex);
 			var noiseTex = ResourceLoader.getTexture('data/shaders/tex/noise${noiseSuffix}.jpg').resource;
-			noiseTex.wrap = Repeat;
-			noiseTex.mipMap = None; // full res at distance instead of mip blur
+			configureLevelTexture(noiseTex);
 			var shader = new NoiseTileMaterial(diffuseTex, normalTex, noiseTex, shininess, specular, MarbleGame.instance.world.ambient,
 				MarbleGame.instance.world.dirLight, MarbleGame.instance.world.dirLightDir, uvScale);
 			onFinish(shader);
@@ -893,8 +899,7 @@ class DifBuilder {
 						var texture:Texture;
 						if (canFindTex(grp)) {
 							texture = ResourceLoader.getTextureRealpath(tex(grp)).resource; // ResourceLoader.getTexture(tex(grp), false).resource;
-							texture.wrap = Wrap.Repeat;
-							texture.mipMap = None; // full res at distance instead of mip blur
+							configureLevelTexture(texture);
 							var exactName = StringTools.replace(texture.name, "data/", "").toLowerCase();
 							exactName = exactName.substring(0, exactName.lastIndexOf('.'));
 							material = h3d.mat.Material.create(texture);
