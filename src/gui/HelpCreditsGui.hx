@@ -4,6 +4,7 @@ import h3d.shader.AlphaChannel;
 import src.DtsObject;
 import hxd.res.BitmapFont;
 import h3d.Vector;
+import src.ControlPrompts;
 import src.ResourceLoader;
 import src.MarbleGame;
 import hxd.Key;
@@ -200,7 +201,7 @@ class HelpCreditsGui extends GuiImage {
 			hcText2.text.text = "";
 			hcText.text.text = '<font face="Arial14"><br/></font><font face="Expo50"><p align="center">Basic Controls</p></font><br/>'
 				+
-				formatText("The marble can be moved forward, back, left and right by pressing <func:bind moveforward>, <func:bind movebackward>, <func:bind moveleft> and <func:bind moveright>, respectively.  Pressing <func:bind jump> causes the marble to jump, and pressing <func:bind mouseFire> uses whatever powerup you currently have available.  All movement is relative to the view direction.");
+				(ControlPrompts.useController() ? formatText("The left stick rolls the marble.  <func:bind jump> makes it jump, and <func:bind mousefire> uses whatever powerup you currently have available.  <func:bind useblast> spends your accumulated blast charge.  All movement is relative to the view direction.") : formatText("The marble can be moved forward, back, left and right by pressing <func:bind moveforward>, <func:bind movebackward>, <func:bind moveleft> and <func:bind moveright>, respectively.  Pressing <func:bind jump> causes the marble to jump, and pressing <func:bind mouseFire> uses whatever powerup you currently have available.  All movement is relative to the view direction."));
 		}
 		if (page == 2) {
 			startPadCtrl.setVisible(false);
@@ -211,7 +212,7 @@ class HelpCreditsGui extends GuiImage {
 			hcText2.text.text = "";
 			hcText.text.text = '<font face="Arial14"><br/></font><font face="Expo50"><p align="center">Camera Controls</p></font><br/>'
 				+
-				formatText("The camera direction can be changed by moving the mouse or by pressing <func:bind panUp>, <func:bind panDown>, <func:bind turnLeft> or <func:bind turnRight>.  In order to look up and down freely with the mouse, hold down <func:bind freelook>.  You can turn free look on always from the Mouse pane of the Control Options screen.");
+				(ControlPrompts.useController() ? formatText("The right stick aims the camera.  Look sensitivity and Y axis inversion can be changed from the Controls pane of the Options screen.") : formatText("The camera direction can be changed by moving the mouse or by pressing <func:bind panUp>, <func:bind panDown>, <func:bind turnLeft> or <func:bind turnRight>.  In order to look up and down freely with the mouse, hold down <func:bind freelook>.  You can turn free look on always from the Mouse pane of the Control Options screen."));
 			startPadCtrl.render(MarbleGame.canvas.scene2d);
 			endPadCtrl.render(MarbleGame.canvas.scene2d);
 			gem1Ctrl.render(MarbleGame.canvas.scene2d);
@@ -404,28 +405,34 @@ class HelpCreditsGui extends GuiImage {
 			var funcdata = func.split(' ').map(x -> x.toLowerCase());
 			var val = "";
 			if (funcdata[0] == "bind") {
-				if (funcdata[1] == "moveforward")
-					val = Util.getKeyForButton(Settings.controlsSettings.forward);
-				if (funcdata[1] == "movebackward")
-					val = Util.getKeyForButton(Settings.controlsSettings.backward);
-				if (funcdata[1] == "moveleft")
-					val = Util.getKeyForButton(Settings.controlsSettings.left);
-				if (funcdata[1] == "moveright")
-					val = Util.getKeyForButton(Settings.controlsSettings.right);
-				if (funcdata[1] == "panup")
-					val = Util.getKeyForButton(Settings.controlsSettings.camForward);
-				if (funcdata[1] == "pandown")
-					val = Util.getKeyForButton(Settings.controlsSettings.camBackward);
-				if (funcdata[1] == "turnleft")
-					val = Util.getKeyForButton(Settings.controlsSettings.camLeft);
-				if (funcdata[1] == "turnright")
-					val = Util.getKeyForButton(Settings.controlsSettings.camRight);
-				if (funcdata[1] == "jump")
-					val = Util.getKeyForButton(Settings.controlsSettings.jump);
-				if (funcdata[1] == "mousefire")
-					val = Util.getKeyForButton(Settings.controlsSettings.powerup);
-				if (funcdata[1] == "freelook")
-					val = Util.getKeyForButton(Settings.controlsSettings.freelook);
+				// A connected pad names its own controls, otherwise fall through to the keys
+				var padLabel = ControlPrompts.bindLabel(funcdata[1]);
+				if (padLabel != null) {
+					val = padLabel;
+				} else {
+					if (funcdata[1] == "moveforward")
+						val = Util.getKeyForButton(Settings.controlsSettings.forward);
+					if (funcdata[1] == "movebackward")
+						val = Util.getKeyForButton(Settings.controlsSettings.backward);
+					if (funcdata[1] == "moveleft")
+						val = Util.getKeyForButton(Settings.controlsSettings.left);
+					if (funcdata[1] == "moveright")
+						val = Util.getKeyForButton(Settings.controlsSettings.right);
+					if (funcdata[1] == "panup")
+						val = Util.getKeyForButton(Settings.controlsSettings.camForward);
+					if (funcdata[1] == "pandown")
+						val = Util.getKeyForButton(Settings.controlsSettings.camBackward);
+					if (funcdata[1] == "turnleft")
+						val = Util.getKeyForButton(Settings.controlsSettings.camLeft);
+					if (funcdata[1] == "turnright")
+						val = Util.getKeyForButton(Settings.controlsSettings.camRight);
+					if (funcdata[1] == "jump")
+						val = Util.getKeyForButton(Settings.controlsSettings.jump);
+					if (funcdata[1] == "mousefire")
+						val = Util.getKeyForButton(Settings.controlsSettings.powerup);
+					if (funcdata[1] == "freelook")
+						val = Util.getKeyForButton(Settings.controlsSettings.freelook);
+				}
 			}
 			start = val.length + pos;
 			text = pre + val + post;
