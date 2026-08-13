@@ -76,6 +76,6 @@ This personal fork was developed with some AI assistance, but with extensive car
 
 ## Reporting issues
 
-If you find an issue that's specific to this fork (i.e. something related to controller support), please [open an issue](https://github.com/evanclue/mbg-fcs/issues) with a short description, reproduction steps, and a screenshot or log when useful.
+If you find an issue that's specific to this fork (i.e. something related to controller support), please [open an issue](https://github.com/evanclue/mbg-controller-roller/issues) with a short description, reproduction steps, and a screenshot or log when useful.
 
 Feel free to open a PR if you wanna contribute :3
