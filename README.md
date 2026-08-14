@@ -40,6 +40,26 @@ Camera sensitivity supports fine adjustment across a wide range, including very 
 Help messages automatically use Xbox-style controller labels, such as A, B, X, Y, shoulder buttons, and triggers, instead of displaying keyboard bindings.
 At some point down the line I may add controller type detection and PlayStation prompt support.
 
+## Linux configuration
+
+Both the portable build and AppImage store configuration in:
+
+```text
+~/.config/controller-roller/
+```
+
+If `XDG_CONFIG_HOME` is set, the directory is `$XDG_CONFIG_HOME/controller-roller` instead. The game stores its normal preferences in `settings.json` and creates an editable `settings.ini` for manual overrides.
+
+To choose the player name shown on local high scores, edit `settings.ini` and set:
+
+```ini
+username=username
+```
+
+A non-empty `username` takes priority over the name saved in `settings.json` and the detected `USER`, `LOGNAME`, or `USERNAME` environment variable. Restart the game after changing it.
+
+The AppImage stores its versioned writable game-data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`).
+
 ## Building on Linux
 
 This fork targets desktop Linux with HashLink and SDL. It requires the MBHaxe Haxe, Heaps, HashLink, and native library toolchain.
@@ -59,10 +79,6 @@ MBG_BUILD_APPIMAGE=1 ./compile-linux.sh
 ```
 
 This one-command local route requires a baseline x86-64 build environment. Architecture-optimized distributions such as CachyOS should use the Steam Linux Runtime release environment/CI described below.
-
-The AppImage keeps settings under `$XDG_CONFIG_HOME/controller-roller` (default: `~/.config/controller-roller`). On first launch, it extracts a versioned writable copy of the packaged game data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`); later launches reuse it.
-
-To override the desktop account name used for local high scores, edit `settings.ini` in that settings directory and set `username=YourName`. This value takes priority over the saved JSON setting and the `USER`, `LOGNAME`, and `USERNAME` environment variables.
 
 The packaging stages can also be run independently. `build-portable.sh` takes an already compiled executable and recursively collects its non-system ELF dependencies; `build-appimage.sh` turns that portable directory into a single AppImage:
 
