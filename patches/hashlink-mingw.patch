@@ -1,0 +1,128 @@
+diff --git a/libs/sdl/gl.c b/libs/sdl/gl.c
+index 934915d..6d73574 100644
+--- a/libs/sdl/gl.c
++++ b/libs/sdl/gl.c
+@@ -14,7 +14,7 @@
+ #	define glMemoryBarrier(...) hl_error("Not supported on OSX")
+ #elif defined(_WIN32)
+ #	include <SDL.h>
+-#	include <GL/GLU.h>
++#	include <GL/glu.h>
+ #	include <glext.h>
+ #elif defined(HL_CONSOLE)
+ #	include <graphic/glapi.h>
+diff --git a/libs/sdl/sdl.c b/libs/sdl/sdl.c
+index c1d0e22..35d7ebf 100644
+--- a/libs/sdl/sdl.c
++++ b/libs/sdl/sdl.c
+@@ -269,7 +269,7 @@ HL_PRIM bool HL_NAME(event_loop)( event_data *event ) {
+ 			event->type = TextInput;
+ 			event->keyCode = *(int*)e.text.text;
+ 			event->keyCode &= e.text.text[0] ? e.text.text[1] ? e.text.text[2] ? e.text.text[3] ? 0xFFFFFFFF : 0xFFFFFF : 0xFFFF : 0xFF : 0;
+-			event->inputChar = hl_to_utf16(e.text.text);
++			event->inputChar = (const char*)hl_to_utf16(e.text.text);
+ 			break;
+ 		case SDL_CONTROLLERDEVICEADDED:
+ 			event->type = GControllerAdded;
+diff --git a/libs/ui/ui_win.c b/libs/ui/ui_win.c
+index a7ea27a..aa39794 100644
+--- a/libs/ui/ui_win.c
++++ b/libs/ui/ui_win.c
+@@ -225,13 +225,23 @@ static void sentinel_loop( vsentinel *s ) {
+ 				SuspendThread(h);
+ 				GetThreadContext(h,&regs);
+ 				// simulate a call
++				// MSVC treats a cast as an lvalue, so the pushes below are written
++				// out through an explicit stack pointer for other compilers.
+ #				ifdef HL_64
+-				*--(int_val*)regs.Rsp = regs.Rip;
+-				*--(int_val*)regs.Rsp = regs.Rsp;
++				{
++					int_val *sp = (int_val*)regs.Rsp;
++					*--sp = (int_val)regs.Rip;
++					*--sp = (int_val)regs.Rsp;
++					regs.Rsp = (int_val)sp;
++				}
+ 				regs.Rip = (int_val)s->callback;
+ #				else
+-				*--(int_val*)regs.Esp = regs.Eip;
+-				*--(int_val*)regs.Esp = regs.Esp;
++				{
++					int_val *sp = (int_val*)regs.Esp;
++					*--sp = (int_val)regs.Eip;
++					*--sp = (int_val)regs.Esp;
++					regs.Esp = (int_val)sp;
++				}
+ 				regs.Eip = (int_val)s->callback;
+ #				endif
+ 				// resume
+diff --git a/src/hl.h b/src/hl.h
+index d9f0be1..1f21bb3 100644
+--- a/src/hl.h
++++ b/src/hl.h
+@@ -175,7 +175,7 @@
+ #ifdef HL_64
+ #	define HL_WSIZE 8
+ #	define IS_64	1
+-#	ifdef HL_VCC
++#	if defined(HL_VCC) || defined(HL_MINGW)
+ #		define _PTR_FMT	L"%IX"
+ #	else
+ #		define _PTR_FMT	u"%lX"
+@@ -183,7 +183,7 @@
+ #else
+ #	define HL_WSIZE 4
+ #	define IS_64	0
+-#	ifdef HL_VCC
++#	if defined(HL_VCC) || defined(HL_MINGW)
+ #		define _PTR_FMT	L"%IX"
+ #	else
+ #		define _PTR_FMT	u"%X"
+diff --git a/src/hlc_main.c b/src/hlc_main.c
+index 4c8dd81..63a0bc2 100644
+--- a/src/hlc_main.c
++++ b/src/hlc_main.c
+@@ -129,10 +129,19 @@ static int throw_handler( int code ) {
+ #endif
+ 
+ #if defined(HL_WIN_DESKTOP) && !defined(_CONSOLE)
++#if defined(HL_MINGW)
++// MinGW builds use -municode, so the GUI entry point is wWinMain, and the wide
++// argument vector is the one whose type matches wmain.
++int wmain(int argc, uchar *argv[]);
++int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
++	return wmain(__argc, (uchar**)__wargv);
++}
++#else
+ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
+ 	return wmain(__argc, __argv);
+ }
+ #endif
++#endif
+ 
+ #ifdef HL_WIN_DESKTOP
+ int wmain(int argc, uchar *argv[]) {
+diff --git a/src/std/thread.c b/src/std/thread.c
+index f4afb33..a9e27bd 100644
+--- a/src/std/thread.c
++++ b/src/std/thread.c
+@@ -940,6 +940,11 @@ void SetThreadName(DWORD dwThreadID, const char* threadName) {
+     info.szName = threadName;
+     info.dwThreadID = dwThreadID;
+     info.dwFlags = 0;
++#ifdef HL_MINGW
++    // GCC has no SEH keywords, and the exception raised below only means
++    // something to an attached debugger, so the thread is left unnamed.
++    (void)info;
++#else
+ #pragma warning(push)
+ #pragma warning(disable: 6320 6322)
+     __try{
+@@ -948,6 +953,7 @@ void SetThreadName(DWORD dwThreadID, const char* threadName) {
+     __except (EXCEPTION_EXECUTE_HANDLER){
+     }
+ #pragma warning(pop)
++#endif
+ }
+ #endif
+ 

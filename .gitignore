@@ -3,7 +3,9 @@
 *.tmp
 .vscode
 native
+native-win
 *.exe
+*.dll
 *.AppImage
 *.obj
 marblegame.hl

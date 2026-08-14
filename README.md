@@ -2,7 +2,9 @@
 
 Marble Blast Gold with full controller support.
 
-Controller Roller is an opinionated desktop Linux fork of [MBHaxe](https://github.com/RandomityGuy/MBHaxe), designed for playing Marble Blast Gold from a couch and TV, a handheld, or a controller-first desktop setup. Every menu and gameplay action is accessible without needing a keyboard or mouse.
+Controller Roller is an opinionated desktop fork of [MBHaxe](https://github.com/RandomityGuy/MBHaxe), designed for playing Marble Blast Gold from a couch and TV, a handheld, or a controller-first desktop setup. Every menu and gameplay action is accessible without needing a keyboard or mouse.
+
+It runs on Linux and Windows. Linux builds ship as a portable directory and an AppImage; the Windows build is a portable folder holding `marblegame.exe`, one DLL, and the game data. Both keep their settings alongside the game rather than in a system location.
 
 ![Main menu with controller cursor](docs/screenshots/main-menu.png)
 
@@ -60,9 +62,13 @@ A non-empty `username` takes priority over the name saved in `settings.json` and
 
 The AppImage stores its versioned writable game-data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`).
 
-## Building on Linux
+## Windows configuration
 
-This fork targets desktop Linux with HashLink and SDL. It requires the MBHaxe Haxe, Heaps, HashLink, and native library toolchain.
+The Windows build is portable and keeps `settings.json` and `settings.ini` in its own folder, next to `marblegame.exe`. Put it somewhere writable rather than under `Program Files`. The `username` setting works the same way it does on Linux.
+
+## Building for Linux
+
+Both platforms are built from Linux on top of HashLink and SDL, and both need the MBHaxe Haxe, Heaps, HashLink, and native library toolchain.
 
 The included script generates the C sources, links the native executable, and deploys a self-contained directory containing the executable, game data, HashLink plugins, and their non-system shared-library dependencies:
 
@@ -112,7 +118,47 @@ The underlying dependencies are:
 - [hxDatachannel](https://github.com/RandomityGuy/hxDatachannel)
 - SDL2 and libuv development libraries
 
-I have not tested Windows, Mac, Android, or WebGL building, but they should function?? ymmv
+## Building for Windows
+
+The Windows build is cross-compiled from Linux with MinGW-w64, and produces a portable folder holding just the executable, one DLL, and the game data:
+
+```text
+dist/MBG-Controller-Roller-Windows/
+├── marblegame.exe
+├── OpenAL32.dll
+└── data/
+```
+
+The cross-compilation toolchain is built once. It needs `cmake`, `ninja`, `curl`, and `git`, plus the same MBHaxe toolchain the Linux build uses:
+
+```bash
+./setup-windows-toolchain.sh
+```
+
+That script downloads a MinGW-w64 cross compiler (unpacking it into the toolchain directory, so no root access is needed) unless one is already installed, fetches a static Windows SDL2, builds OpenAL Soft, and produces static builds of HashLink, its native modules, and libdatachannel. Then build the game as often as needed:
+
+```bash
+./compile-windows.sh
+```
+
+Both scripts default to a toolchain at `/home/cachy/mbhaxe-toolchain`, keep their Windows-specific parts in its `windows` subdirectory, and accept overrides:
+
+```bash
+MBHAXE_TOOLCHAIN=/path/to/toolchain \
+MBG_WIN_TOOLCHAIN=/path/to/windows-toolchain \
+MBG_WIN_DEPLOY_DIR=/path/to/game \
+./compile-windows.sh
+```
+
+Everything the game needs is linked into `marblegame.exe`, including SDL2, HashLink and its native modules, libdatachannel, and the C and C++ runtimes, so the only libraries it loads are the ones Windows itself provides. `compile-windows.sh` fails the build if the finished executable depends on anything else. OpenAL Soft is the deliberate exception: it is LGPL, so it ships beside the game as a DLL instead of being linked in. That DLL is built here rather than taken from MSYS2, whose build would drag in three more GCC runtime DLLs.
+
+The generated HashLink C code is compiled at `-O0`, matching the Linux build. At higher optimization levels the game starts, creates its window, and then renders nothing.
+
+The MBHaxe HashLink fork is only built with MSVC upstream, so `patches/hashlink-mingw.patch` fixes the MSVC-only constructs its sources rely on: SEH keywords, a cast used as an assignment target, a header included under a name that only matches on a case-insensitive filesystem, and the entry point. `setup-windows-toolchain.sh` applies it to a private copy of the sources and never modifies the shared toolchain checkout.
+
+Two copies of Mbed TLS end up in the same binary, because `ssl.hdll` bundles 2.7 while libdatachannel bundles 3.6. Separate `.hdll` libraries each keep their own copy, but a single executable would silently bind one library's calls to the other version's code, so the setup script renames the older copy's symbols out of the way and verifies that none are left shared.
+
+Mac, Android, and WebGL builds are untested here, but they should function?? ymmv
 
 ## Project background
 
