@@ -89,7 +89,6 @@ fi
 export PATH="$mingw_bin:$PATH"
 CC=x86_64-w64-mingw32-gcc
 AR=x86_64-w64-mingw32-gcc-ar
-LD=x86_64-w64-mingw32-ld
 NM=x86_64-w64-mingw32-nm
 OBJCOPY=x86_64-w64-mingw32-objcopy
 
@@ -263,13 +262,22 @@ build_static_lib hldc "-DRTC_STATIC -I$DC/cpp/libdatachannel/include" "$DC/cpp/s
 # ssl.hdll bundles Mbed TLS 2.7 while libdatachannel bundles Mbed TLS 3.6. In
 # separate .hdll libraries each keeps its own copy, but a single executable
 # would silently bind one library's calls to the other version's code, so the
-# older copy is partial-linked and renamed out of the way first.
+# older copy's symbols are renamed out of the way.
+#
+# Each member of the archive is rewritten on its own. Partial-linking them into
+# one object with `ld -r` also works for the renaming, but it mangles the
+# per-function .pdata/.xdata associations that PE stack unwinding relies on,
+# which leaves the finished game spinning forever the first time anything
+# unwinds through this code.
 echo "Separating the two bundled Mbed TLS versions..."
 work="$win_dir/obj/ssl-isolation"
-rm -rf -- "$work"; mkdir -p "$work"
-$LD -r --whole-archive "$prefix/libhlssl.a" -o "$work/hlssl-all.o"
-$NM --defined-only --extern-only --format=posix "$work/hlssl-all.o" |
-	awk '{print $1}' | sort -u > "$work/ssl-symbols.txt"
+rm -rf -- "$work"; mkdir -p "$work/members"
+(cd "$work/members" && $AR x "$prefix/libhlssl.a")
+: > "$work/ssl-symbols.txt"
+for member in "$work/members"/*.o; do
+	$NM --defined-only --extern-only --format=posix "$member" | awk '{print $1}' >> "$work/ssl-symbols.txt"
+done
+sort -u -o "$work/ssl-symbols.txt" "$work/ssl-symbols.txt"
 $NM --defined-only --extern-only --format=posix "$prefix/libMbedTLS.a" \
 	"$prefix/libdatachannel-static.a" "$prefix/libjuice-static.a" "$prefix/libusrsctp.a" |
 	awk 'NF>2 {print $1}' | sort -u > "$work/datachannel-symbols.txt"
@@ -279,13 +287,17 @@ comm -12 "$work/ssl-symbols.txt" "$work/datachannel-symbols.txt" |
 # along with the symbols they point at.
 awk '{print $1" hlssl_"$1"\n.refptr."$1" .refptr.hlssl_"$1}' "$work/shared-symbols.txt" |
 	sort -u > "$work/rename-map.txt"
-$OBJCOPY --redefine-syms="$work/rename-map.txt" "$work/hlssl-all.o" "$prefix/hlssl.o"
-if $NM --defined-only --extern-only --format=posix "$prefix/hlssl.o" | awk '{print $1}' | sort -u |
+for member in "$work/members"/*.o; do
+	$OBJCOPY --redefine-syms="$work/rename-map.txt" "$member"
+done
+rm -f "$prefix/libhlssl.a"
+$AR rcs "$prefix/libhlssl.a" "$work/members"/*.o
+if $NM --defined-only --extern-only --format=posix "$prefix/libhlssl.a" |
+	awk 'NF>2 {print $1}' | sort -u |
 	comm -12 - "$work/datachannel-symbols.txt" | grep -q .; then
 	echo "ERROR: Mbed TLS symbols are still shared between ssl.hdll and libdatachannel" >&2
 	exit 1
 fi
-rm -f "$prefix/libhlssl.a"
 
 cat > "$win_dir/toolchain.env" <<EOF
 # Written by setup-windows-toolchain.sh

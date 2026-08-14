@@ -57,13 +57,19 @@ $CC -c native-win/marblegame.c -o native-win/marblegame.o \
 	-I native-win -I "$hashlink_src/src"
 
 # -mwindows keeps a console window from opening alongside the game.
+#
+# The stack reserve has to be raised well past the 2MB default: unoptimized
+# HL/C code has very large frames, and Linux gives every thread 8MB where
+# Windows would hand out the value below. HashLink creates its threads with a
+# stack size of 0, so they inherit this too. It only reserves address space,
+# which is committed as a thread actually uses it.
 echo "Linking marblegame.exe..."
 $CC -o "$project_dir/marblegame.exe" \
 	native-win/marblegame.o \
-	-municode -mwindows \
+	-municode -mwindows -Wl,--stack,67108864 \
 	-static -static-libgcc -static-libstdc++ \
 	"$lib/libhlsdl.a" "$lib/libhlopenal.a" "$lib/libhlfmt.a" "$lib/libhluv.a" \
-	"$lib/hlssl.o" "$lib/libhlui.a" "$lib/libhldc.a" \
+	"$lib/libhlssl.a" "$lib/libhlui.a" "$lib/libhldc.a" \
 	"$lib/libhl.a" \
 	"$lib/libdatachannel-static.a" "$lib/libjuice-static.a" \
 	"$lib/libusrsctp.a" "$lib/libMbedTLS.a" \
@@ -73,6 +79,50 @@ $CC -o "$project_dir/marblegame.exe" \
 	-luserenv -lcrypt32 -lbcrypt -ldbghelp -lavrt -lksuser -lmfplat -lmfuuid -lwmcodecdspuuid \
 	-lstdc++ -lpthread -lm
 x86_64-w64-mingw32-strip --strip-unneeded "$project_dir/marblegame.exe"
+
+# Windows unwinds the stack through the .pdata table, so a single malformed
+# entry can send the unwinder into a loop the first time an exception is
+# thrown, which looks like the game freezing right after it starts. Mangled
+# unwind data is easy to introduce while combining static libraries and
+# impossible to spot in a normal build log, so the table is checked here.
+echo "Verifying the stack unwind tables..."
+python3 - "$project_dir/marblegame.exe" <<'PYTHON'
+import struct, sys
+
+data = open(sys.argv[1], "rb").read()
+pe = struct.unpack_from("<I", data, 0x3C)[0]
+coff = pe + 4
+n_sections, = struct.unpack_from("<H", data, coff + 2)
+opt_size, = struct.unpack_from("<H", data, coff + 16)
+sections = []
+for i in range(n_sections):
+    off = pe + 4 + 20 + opt_size + i * 40
+    name = data[off:off + 8].rstrip(b"\0").decode(errors="replace")
+    vsize, vaddr, rawsize, rawptr = struct.unpack_from("<IIII", data, off + 8)
+    sections.append((name, vaddr, vsize, rawptr, rawsize))
+
+def to_offset(rva):
+    for _, vaddr, vsize, rawptr, rawsize in sections:
+        if vaddr <= rva < vaddr + max(vsize, rawsize):
+            return rawptr + (rva - vaddr)
+    return None
+
+pdata = next((s for s in sections if s[0] == ".pdata"), None)
+if pdata is None:
+    sys.exit("marblegame.exe has no .pdata section")
+_, _, vsize, rawptr, rawsize = pdata
+bad = 0
+for i in range(min(vsize, rawsize) // 12):
+    begin, end, unwind = struct.unpack_from("<III", data, rawptr + i * 12)
+    if begin == end == unwind == 0:
+        continue
+    off = to_offset(unwind)
+    if off is None or (data[off] & 0x7) not in (1, 2):
+        bad += 1
+if bad:
+    sys.exit("%d of the executable's unwind entries are malformed; stack "
+             "unwinding would hang the game" % bad)
+PYTHON
 
 # Everything except the Windows API and the OpenAL DLL shipped alongside has to
 # be inside the executable, or the build is not portable.

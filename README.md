@@ -152,11 +152,13 @@ MBG_WIN_DEPLOY_DIR=/path/to/game \
 
 Everything the game needs is linked into `marblegame.exe`, including SDL2, HashLink and its native modules, libdatachannel, and the C and C++ runtimes, so the only libraries it loads are the ones Windows itself provides. `compile-windows.sh` fails the build if the finished executable depends on anything else. OpenAL Soft is the deliberate exception: it is LGPL, so it ships beside the game as a DLL instead of being linked in. That DLL is built here rather than taken from MSYS2, whose build would drag in three more GCC runtime DLLs.
 
-The generated HashLink C code is compiled at `-O0`, matching the Linux build. At higher optimization levels the game starts, creates its window, and then renders nothing.
+The generated HashLink C code is compiled at `-O0`, matching the Linux build. At higher optimization levels the game starts, creates its window, and then renders nothing. Unoptimized HL/C also has very large stack frames, so the executable reserves a 64MB stack instead of the 2MB default; HashLink creates its threads with a stack size of 0, so they inherit it. Without that, Windows kills the game during startup and Wine reports stack overflows on several threads.
 
 The MBHaxe HashLink fork is only built with MSVC upstream, so `patches/hashlink-mingw.patch` fixes the MSVC-only constructs its sources rely on: SEH keywords, a cast used as an assignment target, a header included under a name that only matches on a case-insensitive filesystem, and the entry point. `setup-windows-toolchain.sh` applies it to a private copy of the sources and never modifies the shared toolchain checkout.
 
-Two copies of Mbed TLS end up in the same binary, because `ssl.hdll` bundles 2.7 while libdatachannel bundles 3.6. Separate `.hdll` libraries each keep their own copy, but a single executable would silently bind one library's calls to the other version's code, so the setup script renames the older copy's symbols out of the way and verifies that none are left shared.
+Two copies of Mbed TLS end up in the same binary, because `ssl.hdll` bundles 2.7 while libdatachannel bundles 3.6. Separate `.hdll` libraries each keep their own copy, but a single executable would silently bind one library's calls to the other version's code, so the setup script renames the older copy's symbols out of the way and verifies that none are left shared. It rewrites each archive member individually and deliberately avoids partial-linking them into one object with `ld -r`, which renames symbols just as well but mangles the per-function `.pdata` and `.xdata` associations that Windows stack unwinding depends on.
+
+Damaged unwind tables are worth guarding against, because nothing about them shows up at link time: the game starts normally and then spins forever the first time an exception unwinds through the affected code, which looks like a freeze seconds after the main menu appears. `compile-windows.sh` checks every `.pdata` entry in the finished executable and fails the build if any of them is unusable.
 
 Mac, Android, and WebGL builds are untested here, but they should function?? ymmv
 
