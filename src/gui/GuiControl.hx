@@ -85,6 +85,12 @@ class GuiControl {
 	var controllerVerticalOnly:Bool = false;
 
 	/**
+		Set on a screen whose controls are laid out in a single row, so up and down are
+		ignored rather than selecting another item in the row.
+	**/
+	var controllerHorizontalOnly:Bool = false;
+
+	/**
 		Force where the highlight goes from this control in a given direction, overriding the
 		spatial search. Needed where the nearest control is not the one that reads as next,
 		such as the tab row sitting above the level select buttons.

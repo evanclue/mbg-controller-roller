@@ -13,6 +13,7 @@ class ExitGameDlg extends GuiControl {
 		this.vertSizing = Height;
 		this.position = new Vector();
 		this.extent = new Vector(640, 480);
+		this.controllerHorizontalOnly = true;
 
 		function loadButtonImages(path:String) {
 			var normal = ResourceLoader.getResource('${path}_n.png', ResourceLoader.getImage, this.imageResources).toTile();
@@ -44,6 +45,7 @@ class ExitGameDlg extends GuiControl {
 		var yesButton = new GuiButton(loadButtonImages("data/ui/common/yes"));
 		yesButton.position = new Vector(47, 107);
 		yesButton.extent = new Vector(88, 52);
+		yesButton.controllerTipOffset = new Vector(67, 37);
 		yesButton.vertSizing = Bottom;
 		yesButton.horizSizing = Right;
 		yesButton.pressedAction = (e) -> yesFunc(this);
@@ -52,6 +54,7 @@ class ExitGameDlg extends GuiControl {
 		var noButton = new GuiButton(loadButtonImages("data/ui/common/no"));
 		noButton.position = new Vector(151, 107);
 		noButton.extent = new Vector(83, 55);
+		noButton.controllerTipOffset = new Vector(64, 36);
 		noButton.vertSizing = Bottom;
 		noButton.horizSizing = Right;
 		noButton.pressedAction = (e) -> noFunc(this);
@@ -60,6 +63,7 @@ class ExitGameDlg extends GuiControl {
 		var restartButton = new GuiButton(loadButtonImages("data/ui/common/restart"));
 		restartButton.position = new Vector(249, 107);
 		restartButton.extent = new Vector(103, 56);
+		restartButton.controllerTipOffset = new Vector(84, 40);
 		restartButton.vertSizing = Bottom;
 		restartButton.horizSizing = Right;
 		restartButton.pressedAction = (e) -> restartFunc(this);
@@ -70,6 +74,7 @@ class ExitGameDlg extends GuiControl {
 		dialogImg.addChild(noButton);
 		dialogImg.addChild(restartButton);
 
+		this.controllerDefaultFocus = noButton;
 		this.addChild(dialogImg);
 	}
 }

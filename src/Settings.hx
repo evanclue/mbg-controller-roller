@@ -552,6 +552,43 @@ class Settings {
 		return "Player";
 	}
 
+	/**
+		Optional desktop-only player name override. This is deliberately separate from
+		settings.json so a player can set it by hand without the normal settings save
+		rewriting their choice. Section headers are accepted but optional.
+	**/
+	static function loadPlayerNameOverride():String {
+		#if (hl && !android)
+		var iniPath = Path.join([settingsDir, "settings.ini"]);
+		if (!FileSystem.exists(settingsDir))
+			FileSystem.createDirectory(settingsDir);
+		if (!FileSystem.exists(iniPath)) {
+			File.saveContent(iniPath, "# Player name shown on local high scores.\nusername=\n");
+			return null;
+		}
+		try {
+			for (line in File.getContent(iniPath).split("\n")) {
+				var trimmed = StringTools.trim(line);
+				if (trimmed == "" || StringTools.startsWith(trimmed, "#") || StringTools.startsWith(trimmed, ";")
+					|| StringTools.startsWith(trimmed, "["))
+					continue;
+				var equals = trimmed.indexOf("=");
+				if (equals == -1)
+					continue;
+				var key = StringTools.trim(trimmed.substr(0, equals)).toLowerCase();
+				if (key != "username")
+					continue;
+				var value = StringTools.trim(trimmed.substr(equals + 1));
+				if (value != "")
+					return value;
+			}
+		} catch (e:Dynamic) {
+			Console.warn('Could not read $iniPath: $e');
+		}
+		#end
+		return null;
+	}
+
 	public static function computeUiScale():Float {
 		var wnd = Window.getInstance();
 		#if hl
@@ -570,8 +607,11 @@ class Settings {
 
 	public static function init() {
 		load();
+		var playerNameOverride = loadPlayerNameOverride();
+		if (playerNameOverride != null)
+			highscoreName = playerNameOverride;
 		// Covers a missing settings file, where load() never reaches the name
-		if (highscoreName == null || highscoreName == "")
+		else if (highscoreName == null || highscoreName == "")
 			highscoreName = defaultPlayerName();
 		#if hl
 		if (optionsSettings.isFullScreen) {

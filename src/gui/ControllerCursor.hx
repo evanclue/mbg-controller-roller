@@ -237,6 +237,9 @@ class ControllerCursor {
 		// A single column screen ignores left and right entirely
 		if (screen.controllerVerticalOnly && (dir == 2 || dir == 3))
 			dir = -1;
+		// A single row screen ignores up and down entirely
+		if (screen.controllerHorizontalOnly && (dir == 0 || dir == 1))
+			dir = -1;
 		if (dir == -1) {
 			heldDir = -1;
 			heldTime = 0;
