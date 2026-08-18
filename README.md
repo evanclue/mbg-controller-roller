@@ -10,7 +10,7 @@ It runs on Linux and Windows. Linux builds ship as a portable directory and an A
 
 ## Features
 
-- Full controller navigation across the menus, dialogs, level selector, options, gameplay, and high score screens
+- Full controller navigation across the menus, dialogs, level selector, options, gameplay, and end-game screens
 - Xbox-based button prompts that replace keyboard instructions when a controller is active
 - A pointer-finger cursor designed to fit the original game's art style
 - Fractional GUI scaling based on monitor resolution, affecting UI and HUD
@@ -21,13 +21,28 @@ It runs on Linux and Windows. Linux builds ship as a portable directory and an A
 - Continuous level browsing across Beginner, Intermediate, and Advanced categories, stopping only at the end of the game
 - Level names moved below the preview image for improved readability
 - Gold time and personal best printed either side of the in-game timer
-- A gold badge and fanfare when a run beats the level's gold time
-- A rebuilt end-game screen: gold result headline, new personal best banner, and the level's qualify and gold times with achieved checkboxes
+- A gold badge burst and fanfare when a run beats the level's gold time
+- A rebuilt end-game screen led by the run's final time, with the qualify and gold times check marked for how the run did against them
+- Bonus time shown as the subtraction it is, on levels that hand it out
 - A single personal best in place of the three name high score table, with a gold badge over levels already taken gold in the level select
 
 ![Level selector](docs/screenshots/level-select.png)
 
 The level selector can move continuously through every level in the game, instead of abruptly stopping at the end of a difficulty set. Completing a level also offers the next level directly, making a full playthrough feel like one uninterrupted sequence.
+
+Each level shows its qualify time, its gold time, and your personal best in the corner of its panel, in the same colours the in-game timer uses. Levels already taken gold are marked with a check beside the gold time and a gold badge over the preview image, so a pass down the list shows what is left to do.
+
+## Times, gold, and personal bests
+
+![End-game screen after beating the gold time](docs/screenshots/end-game.png)
+
+The gold time and your personal best are printed either side of the timer during play, so the target is on screen while you are chasing it. Finishing under the gold time bursts a gold badge out of the middle of the screen with a fanfare.
+
+The end-game screen is built around the time the run is judged on. The final time is the headline, drawn with the gameplay timer's own digits, and the level's gold and qualify times each carry a check or a cross for how the run did against them. Beating your stored time raises a new personal best banner.
+
+Levels that award bonus time show the working above the result: the elapsed time, the bonus time subtracted from it, and then the final time. Every value comes out of whole milliseconds, so the subtraction adds up exactly as printed.
+
+A single personal best replaces the original three-name high score table, in both this screen and the level selector. Every time belongs to whoever is holding the controller, and a run that beats the stored time is saved without opening a text entry dialog a gamepad cannot type into.
 
 ## Controller-first options
 
@@ -56,7 +71,7 @@ Both the portable build and AppImage store configuration in:
 
 If `XDG_CONFIG_HOME` is set, the directory is `$XDG_CONFIG_HOME/controller-roller` instead. The game stores its normal preferences in `settings.json` and creates an editable `settings.ini` for manual overrides.
 
-To choose the player name shown on local high scores, edit `settings.ini` and set:
+To choose the player name your personal best times are saved under, edit `settings.ini` and set:
 
 ```ini
 username=username
