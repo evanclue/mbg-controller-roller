@@ -1,3 +1,34 @@
+# Controller Roller — 2026-08-18
+
+Gold times, personal bests, and a rebuilt end-game screen.
+
+Gameplay HUD:
+- The level's gold time and your personal best are printed either side of the live timer, in the timer's own font with a black outline so they stay readable over any level. Both follow the UI scale and are repositioned on resize.
+- Beating the level's gold time now bursts a gold badge out of the middle of the screen and plays a fanfare.
+- The HUD is hidden while the end-game panel is up, since the panel prints the run's time itself, and it comes back on restart.
+- The personal best beside the timer is refreshed when a level is restarted, so a run that just moved it shows the new time.
+
+End-game screen:
+- Rebuilt around the run's result: a status headline (failed to qualify, beat the gold time, qualified, or level complete), the level's gold and qualify times each carrying a check or cross for how the run did against it, a new personal best banner, and the personal best row.
+- The final time is the headline, drawn with the gameplay timer's own digits. Levels that hand out bonus time show the working above it on three lines — elapsed time, minus bonus time, then the final time in the large digits — instead of leading with the elapsed time.
+- All three times are derived from whole milliseconds, so the subtraction adds up exactly as printed.
+- A single personal best replaces the three-name high score table. A run that beats the stored time is saved under the desktop user name rather than opening a text entry dialog, which a gamepad cannot type into.
+
+Level select:
+- The level panel prints Time To Qualify, Gold Time, and Personal Best in its bottom left corner, replacing the placeholder "Nardo Polo" best-times table and the invisible second text control that existed only to align its columns.
+- Levels already taken gold show a gold badge over the corner of the preview image and a check beside their gold time, so a glance down the list shows what is left to do.
+
+Audio:
+- Replaced the "classic vibe" music track with a properly looping version.
+- Added the goal fanfare that plays with the gold badge.
+
+Fixes and internals:
+- Centred and right-justified multi-line GUI text was offset twice, once by the text object's position and again by its alignment inside its own width. Only the alignment is applied now.
+- The airborne-movement hint, which is worded for a keyboard inside the mission file and carries no bind token to expand, is rewritten for a controller.
+- Stored scores are trimmed to three entries, since only the best one is shown.
+- The AppImage's writable data copy is keyed on a hash of every file it ships, not on one manifest file, so a build with changed assets always unpacks a fresh copy instead of silently reusing an older one.
+- README documents the new HUD, end-game, and level select behaviour, and the data cache location.
+
 # 1.1.14
 This update brings the following bugfixes:
 - Fixed PowerUp names being incorrect.

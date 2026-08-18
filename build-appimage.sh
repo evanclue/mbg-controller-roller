@@ -58,7 +58,15 @@ mkdir -p "$payload" \
 	"$appdir/usr/share/applications" \
 	"$appdir/usr/share/icons/hicolor/512x512/apps"
 cp -a "$portable_dir/." "$payload/"
-sha256sum "$portable_dir/data/filesystem.manifest" | awk '{ print $1 }' > "$payload/data-version"
+
+# The writable data copy under the user's cache is keyed by this value, so it has to
+# cover everything that ships. Keying it on a single manifest file meant a build with
+# new or changed assets silently reused an older copy, and the game then failed to find
+# resources its code expected.
+(
+	cd "$payload"
+	find data -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum | sha256sum | awk '{ print $1 }'
+) > "$payload/data-version"
 
 cat > "$appdir/AppRun" <<'EOF'
 #!/bin/sh

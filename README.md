@@ -20,6 +20,10 @@ It runs on Linux and Windows. Linux builds ship as a portable directory and an A
 - Sequential level play from the end-game screen without needing to return to the level select menu each time
 - Continuous level browsing across Beginner, Intermediate, and Advanced categories, stopping only at the end of the game
 - Level names moved below the preview image for improved readability
+- Gold time and personal best printed either side of the in-game timer
+- A gold badge and fanfare when a run beats the level's gold time
+- A rebuilt end-game screen: gold result headline, new personal best banner, and the level's qualify and gold times with achieved checkboxes
+- A single personal best in place of the three name high score table, with a gold badge over levels already taken gold in the level select
 
 ![Level selector](docs/screenshots/level-select.png)
 
@@ -60,7 +64,7 @@ username=username
 
 A non-empty `username` takes priority over the name saved in `settings.json` and the detected `USER`, `LOGNAME`, or `USERNAME` environment variable. Restart the game after changing it.
 
-The AppImage stores its versioned writable game-data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`).
+The AppImage stores its versioned writable game-data and converted-resource cache under `$XDG_CACHE_HOME/controller-roller` (default: `~/.cache/controller-roller`). Each build's copy is keyed by a hash of the game data it ships, so a build with changed assets always unpacks a fresh copy instead of reusing an older one. Cache directories from builds you no longer run can be deleted.
 
 ## Windows configuration
 

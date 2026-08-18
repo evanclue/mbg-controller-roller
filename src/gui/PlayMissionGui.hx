@@ -23,6 +23,7 @@ import src.ResourceLoader;
 import h3d.Vector;
 import src.Util;
 import src.MissionList;
+import h2d.filter.Outline;
 
 class PlayMissionGui extends GuiImage {
 	static var currentSelectionStatic:Int = -1;
@@ -38,6 +39,10 @@ class PlayMissionGui extends GuiImage {
 
 	var buttonCooldown:Float = 0.5;
 	var maxButtonCooldown:Float = 0.5;
+
+	// The three time rows, sat in the bottom left of the level panel
+	static inline var TIME_ROW_TOP = 158.0;
+	static inline var TIME_ROW_PITCH = 32.0;
 
 	#if js
 	var previewTimeoutHandle:Option<Int> = None;
@@ -163,6 +168,18 @@ class PlayMissionGui extends GuiImage {
 		levelFgnd.text.text = "Beginner Level 3";
 		pmBox.addChild(levelFgnd);
 
+		// Slapped over the top right corner of the preview, so a glance down the level list
+		// shows which ones have been taken gold. It lives on the panel rather than on the
+		// preview itself, since the preview clips whatever hangs outside it.
+		var goldMedal = new GuiImage(ResourceLoader.getResource("data/ui/play/goldbadge.png", ResourceLoader.getImage, this.imageResources).toTile());
+		// The art is pre rotated, so it is never sampled square and wants smoothing
+		var goldMedalTex = goldMedal.bmp.tile.getTexture();
+		if (goldMedalTex != null)
+			goldMedalTex.filter = Linear;
+		goldMedal.position = new Vector(492, 20);
+		goldMedal.extent = new Vector(90, 55);
+		goldMedal.bmp.visible = false;
+
 		var noQualText = new GuiText(domcasual32);
 		noQualText.position = new Vector(0, 84);
 		noQualText.extent = new Vector(254, 32);
@@ -265,6 +282,8 @@ class PlayMissionGui extends GuiImage {
 		};
 		pmBox.addChild(pmBack);
 
+		pmBox.addChild(goldMedal);
+
 		var transparentbmp = new hxd.BitmapData(1, 1);
 		transparentbmp.setPixel(0, 0, 0);
 		var transparentTile = Tile.fromBitmap(transparentbmp);
@@ -302,31 +321,48 @@ class PlayMissionGui extends GuiImage {
 			}
 		}
 
+		// A second, upright copy of the badge is set inline beside a gold personal best
 		var pmDescription = new GuiMLText(arial14, mlFontLoader);
 		pmDescription.position = new Vector(61, 52);
 		pmDescription.extent = new Vector(215, 174);
 		pmDescription.text.textColor = 0x000000;
 		// We're gonna use Â to align shit lmao, its too hacky i know
 		var descText = '<font face="DomCasual24" color="#000000">Learn The Super Speed </font><br/><br/>' + 'ÂTest Align';
-		descText += '<br/><br/><font face="DomCasual24">Best Times:</font><br/>';
-		for (i in 0...3) {
-			descText += '<br/>ÂÂ<font face="ArialBold14">${i + 1}. Nardo Polo</font>';
-		}
 		pmDescription.text.text = descText;
 		pmBox.addChild(pmDescription);
 
-		// Oh god this is yet another hack cause I cant do that tab thing torque does so thats bruh
-		var pmDescriptionOther = new GuiMLText(arial14, mlFontLoader);
-		pmDescriptionOther.position = new Vector(61, 52);
-		pmDescriptionOther.extent = new Vector(215, 174);
-		pmDescriptionOther.text.textColor = 0x000000;
-		var descText2 = '<br/><br/>' + '<font opacity="0">ÂTest Align</font>';
-		descText2 += '<br/><br/><br/>';
-		for (i in 0...3) {
-			descText2 += '<br/>ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ<font face="ArialBold14">99:59.999</font>';
+		// The level's times are printed the way the hud prints them, as their own controls
+		// rather than lines of the description, since each carries its own colour and
+		// outline. They sit in the bottom left corner of the panel on every level rather
+		// than trailing the description, which runs to a different height on each one. The
+		// longest description in the game wraps to four lines and ends at 142.
+		function timeRow(y:Float, color:Int) {
+			var row = new GuiText(domcasual24);
+			row.position = new Vector(61, y);
+			row.extent = new Vector(215, 20);
+			row.text.textColor = color;
+			row.text.filter = new Outline(Math.max(1, Math.round(Settings.uiScale)), 0x000000);
+			pmBox.addChild(row);
+			return row;
 		}
-		pmDescriptionOther.text.text = descText2;
-		pmBox.addChild(pmDescriptionOther);
+
+		var qualifyRow = timeRow(TIME_ROW_TOP, 0x00FF00);
+		var goldRow = timeRow(TIME_ROW_TOP + TIME_ROW_PITCH, 0xFFCC00);
+		var bestRow = timeRow(TIME_ROW_TOP + 2 * TIME_ROW_PITCH, 0xFFFFFF);
+
+		// Marks sit beside the text rather than inside it, since the outline filter would
+		// wrap the art too and the check carries its own outline already
+		var goldCheck = new GuiImage(ResourceLoader.getResource("data/ui/endgame/check.png", ResourceLoader.getImage, this.imageResources).toTile());
+		var goldCheckTex = goldCheck.bmp.tile.getTexture();
+		if (goldCheckTex != null)
+			goldCheckTex.filter = Linear;
+		var checkHeight = 20 * 0.85;
+		// Times are fixed width, so the mark lands in the same place on every level
+		goldRow.text.text = "Gold Time: 00:00.000";
+		goldCheck.position = new Vector(goldRow.text.textWidth / Settings.uiScale + 8, 20 * 0.55 - checkHeight / 2);
+		goldCheck.extent = new Vector((41 / 39) * checkHeight, checkHeight);
+		goldCheck.bmp.visible = false;
+		goldRow.addChild(goldCheck);
 
 		var tabBeginner = new GuiImage(ResourceLoader.getResource("data/ui/play/tab_begin.png", ResourceLoader.getImage, this.imageResources).toTile());
 		tabBeginner.position = new Vector(29, 2);
@@ -405,12 +441,6 @@ class PlayMissionGui extends GuiImage {
 			return splits.join('\n');
 		}
 
-		var goldBadge = ResourceLoader.getResource("data/ui/play/goldscore.png", ResourceLoader.getImage, this.imageResources).toTile();
-		goldBadge.dy = 2.5 * Settings.uiScale;
-		goldBadge.dx = 8 * Settings.uiScale;
-		var gbWidth = goldBadge.width;
-		var gbHeight = goldBadge.height;
-
 		setSelectedFunc = function setSelected(index:Int) {
 			if (index > currentList.length - 1) {
 				index = currentList.length - 1;
@@ -470,40 +500,21 @@ class PlayMissionGui extends GuiImage {
 			}
 
 			var scoreData:Array<Score> = Settings.getScores(currentMission.path);
-			while (scoreData.length < 3) {
-				scoreData.push({name: "Nardo Polo", time: 5999.999});
-			}
+			var personalBest:Float = scoreData.length > 0 ? scoreData[0].time : Math.POSITIVE_INFINITY;
+			var hasGold = personalBest != Math.POSITIVE_INFINITY && currentMission.goldTime > 0 && personalBest < currentMission.goldTime;
+			goldMedal.bmp.visible = hasGold;
+			goldCheck.bmp.visible = hasGold;
+
+			qualifyRow.text.text = currentMission.qualifyTime != Math.POSITIVE_INFINITY ? 'Time To Qualify: ${Util.formatTime(currentMission.qualifyTime)}' : "";
+			goldRow.text.text = currentMission.goldTime > 0 ? 'Gold Time: ${Util.formatTime(currentMission.goldTime)}' : "";
+			// One personal best rather than a named high score table, since the times all
+			// belong to whoever is holding the pad
+			bestRow.text.text = 'Personal Best: '
+				+ (personalBest == Math.POSITIVE_INFINITY ? "--:--.---" : Util.formatTime(personalBest));
 
 			var descText = '<font face="DomCasual24" color="#000000">${currentMission.title}</font><br/><br/>'
 				+ splitTextWithPadding(pmDescription.text, StringTools.htmlEscape(Util.unescape(currentMission.description)));
-			if (currentMission.qualifyTime != Math.POSITIVE_INFINITY) {
-				descText += '<font face="DomCasual24"><br/>Time To Qualify: ${Util.formatTime(currentMission.qualifyTime)}</font>';
-			}
-			descText += '<br/><br/><font face="DomCasual24">Best Times:</font><br/>';
-			for (i in 0...3) {
-				descText += '<br/>ÂÂ<font face="ArialBold14">${i + 1}. ${scoreData[i].name}</font>';
-			}
 			pmDescription.text.text = descText;
-
-			var descText2 = '<br/><br/>'
-				+
-				'<font opacity="0">${splitTextWithPadding(pmDescriptionOther.text, StringTools.htmlEscape(Util.unescape(currentMission.description)))}</font>';
-			descText2 += '<br/><br/>';
-			if (currentMission.qualifyTime != Math.POSITIVE_INFINITY) {
-				descText2 += '<font face="DomCasual24" opacity="0"><br/>Time To Qualify: ${Util.formatTime(currentMission.qualifyTime)}</font>';
-			}
-			descText2 += '<br/>';
-			for (i in 0...3) {
-				descText2 += '<br/>ÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂÂ<font face="ArialBold14">${Util.formatTime(scoreData[i].time)}</font>';
-				if (scoreData[i].time < currentMission.goldTime) {
-					descText2 += '<img src="goldBadge.png"></img>';
-				}
-			}
-			pmDescriptionOther.text.lineHeightMode = TextOnly;
-			pmDescriptionOther.text.text = descText2;
-			pmDescriptionOther.text.loadImage = (name) -> goldBadge;
-			goldBadge.scaleToSize((gbWidth / gbHeight) * arialBold14.lineHeight, arialBold14.lineHeight);
-			pmDescription.text.lineSpacing = pmDescriptionOther.text.lineSpacing;
 
 			#if android
 			pmPreview.bmp.tile = currentMission.getPreviewImageSync();

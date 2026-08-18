@@ -39,6 +39,17 @@ class PlayGui {
 	var timerPoint:GuiImage;
 	var timerColon:GuiImage;
 
+	var goldTimeText:h2d.Text;
+	var personalBestText:h2d.Text;
+	var goldTime:Float = 0;
+	var personalBest:Float = Math.POSITIVE_INFINITY;
+
+	var goldSplash:Bitmap;
+	var goldSplashTime:Float = -1;
+
+	var hudVisible:Bool = true;
+	var gemCounterShown:Bool = false;
+
 	var gemCountNumbers:Array<GuiAnim> = [];
 	var gemCountSlash:GuiImage;
 	var gemImageScene:h3d.scene.Scene;
@@ -79,6 +90,12 @@ class PlayGui {
 			powerupImageSceneTarget.dispose();
 			powerupImageSceneTargetBitmap.remove();
 			RSGOCenterText.remove();
+			if (goldSplash != null)
+				goldSplash.remove();
+			if (goldTimeText != null) {
+				goldTimeText.remove();
+				personalBestText.remove();
+			}
 
 			for (textureResource in textureResources) {
 				textureResource.release();
@@ -132,6 +149,8 @@ class PlayGui {
 		initCenterText();
 		initPowerupBox();
 		initTexts();
+		initSideTimers();
+		initGoldSplash();
 
 		if (Util.isTouchDevice()) {
 			MarbleGame.instance.touchInput.showControls(this.playGuiCtrl, false);
@@ -149,6 +168,28 @@ class PlayGui {
 		};
 
 		Window.getInstance().addResizeEvent(resizeEv);
+	}
+
+	/**
+		Hides the whole play hud, used while the end game panel is up: it reprints the run's
+		time itself, so the live timer behind it would only be repeating the same numbers.
+	**/
+	public function setHudVisible(visible:Bool) {
+		hudVisible = visible;
+		applyHudVisibility();
+	}
+
+	function applyHudVisibility() {
+		if (playGuiCtrl != null && playGuiCtrl._flow != null)
+			playGuiCtrl._flow.visible = hudVisible;
+		if (gemImageSceneTargetBitmap != null)
+			gemImageSceneTargetBitmap.visible = hudVisible && gemCounterShown;
+		if (powerupImageSceneTargetBitmap != null)
+			powerupImageSceneTargetBitmap.visible = hudVisible;
+		if (goldTimeText != null) {
+			goldTimeText.visible = hudVisible && goldTime > 0;
+			personalBestText.visible = hudVisible;
+		}
 	}
 
 	public function initTimer() {
@@ -197,6 +238,80 @@ class PlayGui {
 		timerCtrl.addChild(timerNumbers[6]);
 
 		playGuiCtrl.addChild(timerCtrl);
+	}
+
+	static inline var SIDE_TIME_FONT_SIZE = 24;
+
+	// The timer control is 234 wide and centred, but its digits are not centred inside it:
+	// the ink runs from 89 left of the middle to 111 right of it
+	static inline var TIMER_INK_LEFT = 89;
+	static inline var TIMER_INK_RIGHT = 111;
+	static inline var TIMER_SIDE_GAP = 16;
+
+	function buildSideTimeFont():h2d.Font {
+		var domcasualfontdata = ResourceLoader.getFileEntry("data/font/DomCasualD.fnt");
+		var domcasualb = new BitmapFont(domcasualfontdata.entry);
+		@:privateAccess domcasualb.loader = ResourceLoader.loader;
+		return domcasualb.toSdfFont(cast SIDE_TIME_FONT_SIZE * Settings.uiScale, MultiChannel);
+	}
+
+	/**
+		The gold time and the personal best sit either side of the live timer. They are
+		placed straight on the scene rather than inside `playGuiCtrl`, since the gui control
+		clips its children to the box it was authored in and these hang outside the timer.
+	**/
+	function initSideTimers() {
+		var font = buildSideTimeFont();
+
+		// A black outline rather than an offset backdrop, so both readouts stay legible over
+		// whatever the level puts behind them
+		goldTimeText = new Text(font, scene2d);
+		goldTimeText.textColor = 0xFFCC00;
+		goldTimeText.filter = buildOutline();
+
+		personalBestText = new Text(font, scene2d);
+		personalBestText.textColor = 0xFFFFFF;
+		personalBestText.filter = buildOutline();
+
+		updateSideTimerText();
+	}
+
+	function buildOutline() {
+		// Scales with the ui, so it stays the same weight against the text at any resolution
+		return new h2d.filter.Outline(Math.max(1, Math.round(Settings.uiScale)), 0x000000);
+	}
+
+	/**
+		Level times for the readouts beside the live timer. A gold time of 0 means the
+		mission has none, and an infinite best means the level has never been finished.
+	**/
+	public function setLevelTimes(goldTime:Float, personalBest:Float) {
+		this.goldTime = goldTime;
+		this.personalBest = personalBest;
+		updateSideTimerText();
+		layoutSideTimers();
+	}
+
+	function updateSideTimerText() {
+		if (goldTimeText == null)
+			return;
+		goldTimeText.visible = hudVisible && goldTime > 0;
+		goldTimeText.text = 'Gold Time: ${Util.formatTime(goldTime)}';
+		personalBestText.text = 'Personal Best: ' + (personalBest == Math.POSITIVE_INFINITY ? "--:--.---" : Util.formatTime(personalBest));
+		personalBestText.visible = hudVisible;
+	}
+
+	function layoutSideTimers() {
+		if (goldTimeText == null)
+			return;
+		var centerX = scene2d.width / 2;
+		// Centre the readouts on the digits themselves, which sit inset in their tiles
+		var y = (1 + 26.5) * Settings.uiScale - goldTimeText.font.lineHeight / 2;
+		goldTimeText.y = y;
+		goldTimeText.x = centerX - (TIMER_INK_LEFT + TIMER_SIDE_GAP) * Settings.uiScale - goldTimeText.textWidth;
+
+		personalBestText.y = y;
+		personalBestText.x = centerX + (TIMER_INK_RIGHT + TIMER_SIDE_GAP) * Settings.uiScale;
 	}
 
 	public function initCenterText() {
@@ -390,6 +505,8 @@ class PlayGui {
 		}
 		if (RSGOCenterText != null)
 			layoutCenterText();
+		layoutSideTimers();
+		layoutGoldSplash();
 	}
 
 	/**
@@ -411,6 +528,15 @@ class PlayGui {
 		helpTextBackground.text.font = bfont;
 		alertTextForeground.text.font = bfont;
 		alertTextBackground.text.font = bfont;
+
+		if (goldTimeText != null) {
+			var sidefont = buildSideTimeFont();
+			goldTimeText.font = sidefont;
+			personalBestText.font = sidefont;
+			// The outline width is baked against the scale it was built at
+			goldTimeText.filter = buildOutline();
+			personalBestText.filter = buildOutline();
+		}
 	}
 
 	function initTexts() {
@@ -545,19 +671,12 @@ class PlayGui {
 	}
 
 	public function formatGemCounter(collected:Int, total:Int) {
-		if (total == 0) {
-			for (number in gemCountNumbers) {
-				number.anim.visible = false;
-			}
-			gemCountSlash.bmp.visible = false;
-			gemImageSceneTargetBitmap.visible = false;
-		} else {
-			for (number in gemCountNumbers) {
-				number.anim.visible = true;
-			}
-			gemCountSlash.bmp.visible = true;
-			gemImageSceneTargetBitmap.visible = true;
+		gemCounterShown = total != 0;
+		for (number in gemCountNumbers) {
+			number.anim.visible = gemCounterShown;
 		}
+		gemCountSlash.bmp.visible = gemCounterShown;
+		gemImageSceneTargetBitmap.visible = hudVisible && gemCounterShown;
 
 		var totalTenths = Math.floor(total / 10);
 		var totalOnes = total % 10;
@@ -595,6 +714,58 @@ class PlayGui {
 		timerNumbers[6].anim.currentFrame = thousandth;
 	}
 
+	// Long enough for the whole burst to land inside the two second wait between touching
+	// the finish and the end game screen appearing
+	static inline var GOLD_SPLASH_DURATION = 1.35;
+
+	// Width the badge settles at, in the 640 wide authored layout space
+	static inline var GOLD_SPLASH_WIDTH = 300;
+
+	/**
+		The gold badge burst shown when a run beats the level's gold time, blown up out of
+		the middle of the screen and faded out alongside the goal jingle.
+	**/
+	public function playGoldSplash() {
+		if (goldSplash == null)
+			return;
+		// Re-adding lifts it above everything else already on the scene
+		scene2d.addChild(goldSplash);
+		goldSplash.visible = true;
+		goldSplashTime = 0;
+		layoutGoldSplash();
+		AudioManager.playSound(ResourceLoader.getResource('data/sound/goal.ogg', ResourceLoader.getAudio, this.soundResources));
+	}
+
+	public function hideGoldSplash() {
+		goldSplashTime = -1;
+		if (goldSplash != null)
+			goldSplash.visible = false;
+	}
+
+	function initGoldSplash() {
+		var tile = ResourceLoader.getResource("data/ui/game/gold.png", ResourceLoader.getImage, this.imageResources).toTile();
+		// Drawn well above its source size and never pixel aligned, so nearest sampling
+		// would show its edges
+		var tex = tile.getTexture();
+		if (tex != null)
+			tex.filter = Linear;
+		goldSplash = new Bitmap(tile, scene2d);
+		goldSplash.visible = false;
+	}
+
+	function layoutGoldSplash() {
+		if (goldSplash == null || goldSplashTime < 0)
+			return;
+		var t = Util.clamp(goldSplashTime / GOLD_SPLASH_DURATION, 0, 1);
+		// Exponential ease out, so it snaps out to size and then drifts
+		var grow = 1 - Math.pow(2, -10 * t);
+		var scale = (0.55 + 0.7 * grow) * GOLD_SPLASH_WIDTH * Settings.uiScale / goldSplash.tile.width;
+		goldSplash.setScale(scale);
+		goldSplash.alpha = t < 0.5 ? 1 : Math.max(0, 1 - (t - 0.5) / 0.5);
+		goldSplash.x = scene2d.width / 2 - goldSplash.tile.width * scale / 2;
+		goldSplash.y = scene2d.height / 2 - goldSplash.tile.height * scale / 2;
+	}
+
 	public function render(engine:h3d.Engine) {
 		engine.pushTarget(this.gemImageSceneTarget);
 
@@ -611,6 +782,13 @@ class PlayGui {
 	}
 
 	public function update(timeState:TimeState) {
+		if (goldSplashTime >= 0) {
+			goldSplashTime += timeState.dt;
+			if (goldSplashTime >= GOLD_SPLASH_DURATION)
+				hideGoldSplash();
+			else
+				layoutGoldSplash();
+		}
 		this.gemImageObject.update(timeState);
 		this.gemImageScene.setElapsedTime(timeState.dt);
 		if (this.powerupImageObject != null)

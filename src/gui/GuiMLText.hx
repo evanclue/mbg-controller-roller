@@ -43,18 +43,16 @@ class GuiMLText extends GuiControl {
 			var props = parent.getProperties(this.text);
 			props.isAbsolute = true;
 
-			if (justify == Left) {
-				text.setPosition(Math.floor(off.x), Math.floor(off.y));
+			// Unlike plain text, HtmlText lays each line out inside `maxWidth`, which is set
+			// above to this control's width, so the text object stays at the left edge for
+			// every justification instead of being moved to the centre or right of the box
+			text.setPosition(Math.floor(off.x), Math.floor(off.y));
+			if (justify == Left)
 				text.textAlign = Left;
-			}
-			if (justify == Right) {
-				text.setPosition(Math.floor(off.x + renderRect.extent.x), Math.floor(off.y));
+			if (justify == Right)
 				text.textAlign = Right;
-			}
-			if (justify == Center) {
-				text.setPosition(Math.floor(off.x + renderRect.extent.x / 2), Math.floor(off.y));
+			if (justify == Center)
 				text.textAlign = Center;
-			}
 		}
 
 		// if (this.scrollable) {

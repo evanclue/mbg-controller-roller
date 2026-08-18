@@ -282,6 +282,9 @@ class Settings {
 			var scoreList = highScores.get(mapPath);
 			scoreList.push(score);
 			scoreList.sort((a, b) -> a.time == b.time ? 0 : (a.time > b.time ? 1 : -1));
+			// Only the best time is shown now, so there is no reason to keep a growing tail
+			if (scoreList.length > 3)
+				scoreList.splice(3, scoreList.length - 3);
 		} else {
 			highScores.set(mapPath, [score]);
 		}

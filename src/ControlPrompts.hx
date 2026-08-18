@@ -76,6 +76,9 @@ class ControlPrompts {
 			return "Push the left stick left to roll the marble left!";
 		if (text.indexOf("<func:bind moveright>") != -1)
 			return "Push the left stick right to roll the marble right!";
+		// Worded for a keyboard in the mission file itself, with no bind token to expand
+		if (text.indexOf("direction keys while airborn") != -1)
+			return "Use the left stick while airborne to move the marble.";
 		return text;
 	}
 }

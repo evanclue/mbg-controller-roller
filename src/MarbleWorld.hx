@@ -357,6 +357,7 @@ class MarbleWorld extends Scheduler {
 			this.endPad.generateCollider();
 
 		this.playGui.formatGemCounter(this.gemCount, this.totalGems);
+		this.playGui.setLevelTimes(this.mission.goldTime, getPersonalBest());
 		Console.log("MISSION LOADED");
 		start();
 	}
@@ -629,6 +630,10 @@ class MarbleWorld extends Scheduler {
 			this.gemCount = 0;
 			this.playGui.formatGemCounter(this.gemCount, this.totalGems);
 		}
+		// A run finished since the level loaded may have moved the best time on
+		this.playGui.setLevelTimes(this.mission.goldTime, getPersonalBest());
+		this.playGui.hideGoldSplash();
+		this.playGui.setHudVisible(true);
 
 		if (radar != null)
 			radar.reset();
@@ -2119,6 +2124,12 @@ class MarbleWorld extends Scheduler {
 		this.gameMode.onGemPickup(marble, gem);
 	}
 
+	/** Best stored time for this level, or infinity when it has never been finished. **/
+	function getPersonalBest():Float {
+		var scores = Settings.getScores(this.mission.path);
+		return scores.length > 0 ? scores[0].time : Math.POSITIVE_INFINITY;
+	}
+
 	function touchFinish() {
 		if (this.finishTime != null
 			|| (this.marble.outOfBounds && this.timeState.currentAttemptTime - this.marble.outOfBoundsTime.currentAttemptTime >= 0.5))
@@ -2135,6 +2146,8 @@ class MarbleWorld extends Scheduler {
 			this.finishYaw = this.marble.camera.CameraYaw;
 			this.finishPitch = this.marble.camera.CameraPitch;
 			displayAlert("Congratulations! You've finished!");
+			if (this.mission.goldTime > 0 && this.finishTime.gameplayClock < this.mission.goldTime)
+				this.playGui.playGoldSplash();
 			if (!Settings.levelStatistics.exists(mission.path)) {
 				Settings.levelStatistics.set(mission.path, {
 					oobs: 0,
@@ -2189,6 +2202,9 @@ class MarbleWorld extends Scheduler {
 		if (Util.isTouchDevice()) {
 			MarbleGame.instance.touchInput.setControlsEnabled(false);
 		}
+		// The panel prints the run's time itself, so the live hud behind it is redundant
+		this.playGui.setHudVisible(false);
+		this.playGui.hideGoldSplash();
 		egg = new EndGameGui((sender) -> {
 			if (Util.isTouchDevice()) {
 				MarbleGame.instance.touchInput.hideControls(@:privateAccess this.playGui.playGuiCtrl);
